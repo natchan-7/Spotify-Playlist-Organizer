@@ -206,6 +206,26 @@ code {
   overflow: hidden;
 }
 
+.playlist-card-footer {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.1rem;
+}
+
+.playlist-link {
+  color: #9ce7b5;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.playlist-link:hover {
+  text-decoration: underline;
+}
+
+.playlist-link.disabled {
+  color: #8da1ba;
+}
+
 .eyebrow {
   margin: 0 0 0.75rem;
   color: #8db7ff;

@@ -16,11 +16,28 @@ function AuthStatusCard({
   errorMessage,
   isAuthenticated,
   onLogin,
+  playlistsCount,
   playlistsStatus,
   session,
   onLogout,
 }) {
   const hasConfig = Boolean(import.meta.env.VITE_SPOTIFY_CLIENT_ID);
+
+  function getPlaylistStatusLabel() {
+    if (playlistsStatus === "success") {
+      return `${playlistsCount} loaded`;
+    }
+
+    if (playlistsStatus === "loading") {
+      return "Loading";
+    }
+
+    if (playlistsStatus === "error") {
+      return "Error";
+    }
+
+    return "Idle";
+  }
 
   return (
     <section className="auth-card">
@@ -63,7 +80,7 @@ function AuthStatusCard({
           </div>
           <div className="session-row">
             <span className="label">Playlist fetch</span>
-            <span className="value">{playlistsStatus}</span>
+            <span className="value">{getPlaylistStatusLabel()}</span>
           </div>
           <div className="action-row">
             <button className="secondary-button" type="button" onClick={onLogout}>

@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from "react";
-import { useEffect, useState } from "react";
 import AuthPage from "./pages/AuthPage";
 import { fetchCurrentUserPlaylists } from "./services/spotifyApi";
 import {
@@ -127,6 +126,7 @@ function App() {
       onLogin={handleLogin}
       onLogout={handleLogout}
       playlists={playlists}
+      playlistsCount={playlists.length}
       playlistsError={playlistsError}
       playlistsStatus={playlistsStatus}
       session={session}
