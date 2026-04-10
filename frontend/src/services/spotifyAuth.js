@@ -85,6 +85,8 @@ export async function exchangeCodeForToken() {
 
   if (error) {
     clearAuthQueryParams();
+    clearCodeVerifier();
+    removeStoredAuthState();
     throw new Error(`Spotify authorization failed: ${error}`);
   }
 
@@ -104,6 +106,12 @@ export async function exchangeCodeForToken() {
     throw new Error("Invalid OAuth state.");
   }
 
+  // Consume the callback immediately so React StrictMode does not retry the
+  // same authorization code during the development-only remount cycle.
+  clearAuthQueryParams();
+  clearCodeVerifier();
+  removeStoredAuthState();
+
   const body = new URLSearchParams({
     client_id: clientId,
     grant_type: "authorization_code",
@@ -121,10 +129,6 @@ export async function exchangeCodeForToken() {
   });
 
   const payload = await response.json();
-
-  clearAuthQueryParams();
-  clearCodeVerifier();
-  removeStoredAuthState();
 
   if (!response.ok) {
     const message = payload?.error_description || payload?.error || "Token exchange failed.";

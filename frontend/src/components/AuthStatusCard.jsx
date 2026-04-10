@@ -14,6 +14,7 @@ function AuthStatusCard({
   errorMessage,
   isAuthenticated,
   onLogin,
+  playlistsStatus,
   session,
   onLogout,
 }) {
@@ -57,6 +58,10 @@ function AuthStatusCard({
           <div className="session-row">
             <span className="label">Token expires</span>
             <span className="value">{formatExpiry(session?.expiresAt)}</span>
+          </div>
+          <div className="session-row">
+            <span className="label">Playlist fetch</span>
+            <span className="value">{playlistsStatus}</span>
           </div>
           <div className="action-row">
             <button className="secondary-button" type="button" onClick={onLogout}>

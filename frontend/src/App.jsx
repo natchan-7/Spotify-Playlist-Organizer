@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AuthPage from "./pages/AuthPage";
+import { fetchCurrentUserPlaylists } from "./services/spotifyApi";
 import {
   beginSpotifyLogin,
   clearSpotifySession,
@@ -12,6 +13,9 @@ function App() {
   const [session, setSession] = useState(() => getSpotifySession());
   const [authStatus, setAuthStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [playlists, setPlaylists] = useState([]);
+  const [playlistsStatus, setPlaylistsStatus] = useState("idle");
+  const [playlistsError, setPlaylistsError] = useState("");
 
   useEffect(() => {
     if (!hasAuthCallbackParams()) {
@@ -53,6 +57,9 @@ function App() {
     setSession(null);
     setAuthStatus("idle");
     setErrorMessage("");
+    setPlaylists([]);
+    setPlaylistsStatus("idle");
+    setPlaylistsError("");
   }
 
   async function handleLogin() {
@@ -69,14 +76,58 @@ function App() {
     }
   }
 
+  useEffect(() => {
+    if (!session?.accessToken) {
+      setPlaylists([]);
+      setPlaylistsStatus("idle");
+      setPlaylistsError("");
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadPlaylists() {
+      setPlaylistsStatus("loading");
+      setPlaylistsError("");
+
+      try {
+        const nextPlaylists = await fetchCurrentUserPlaylists(session.accessToken);
+
+        if (!ignore) {
+          setPlaylists(nextPlaylists);
+          setPlaylistsStatus("success");
+        }
+      } catch (error) {
+        if (!ignore) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch Spotify playlists.";
+          setPlaylists([]);
+          setPlaylistsError(message);
+          setPlaylistsStatus("error");
+        }
+      }
+    }
+
+    loadPlaylists();
+
+    return () => {
+      ignore = true;
+    };
+  }, [session]);
+
   return (
     <AuthPage
       authStatus={authStatus}
       errorMessage={errorMessage}
       isAuthenticated={Boolean(session?.accessToken)}
       onLogin={handleLogin}
-      session={session}
       onLogout={handleLogout}
+      playlists={playlists}
+      playlistsError={playlistsError}
+      playlistsStatus={playlistsStatus}
+      session={session}
     />
   );
 }
