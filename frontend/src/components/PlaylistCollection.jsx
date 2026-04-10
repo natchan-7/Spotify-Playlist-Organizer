@@ -76,7 +76,7 @@ function PlaylistCollection({ playlists, playlistsError, playlistsStatus }) {
                   <span className="playlist-pill">{getVisibilityLabel(playlist)}</span>
                 </div>
                 <p className="playlist-meta">
-                  {playlist.totalTracks} tracks · by {playlist.ownerName}
+                  {playlist.totalTracks} tracks by {playlist.ownerName}
                 </p>
                 {playlist.description && (
                   <p className="playlist-description">

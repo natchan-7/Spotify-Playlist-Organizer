@@ -131,6 +131,7 @@ code {
 .playlist-card {
   display: grid;
   gap: 0.9rem;
+  min-width: 0;
   padding: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1.2rem;
@@ -170,6 +171,7 @@ code {
 .playlist-card-body {
   display: grid;
   gap: 0.65rem;
+  min-width: 0;
 }
 
 .playlist-card-top {
@@ -182,16 +184,26 @@ code {
 .playlist-card-top h3 {
   margin: 0;
   font-size: 1.1rem;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .playlist-meta,
 .playlist-description {
   margin: 0;
   color: #bfd0e6;
+  overflow-wrap: anywhere;
 }
 
 .playlist-description {
   font-size: 0.95rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .eyebrow {
