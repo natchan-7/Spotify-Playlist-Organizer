@@ -3,67 +3,6 @@
 > vite --host 127.0.0.1 --port 5173
 
 
-  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m299[22m[2m[0m ms[22m
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m275[22m[2m[0m ms[22m
 
   [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
-[2m21:10:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AuthPage.jsx[22m
-[2m21:10:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:10:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
-[2m21:10:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AuthStatusCard.jsx[22m
-[2m21:10:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AuthPage.jsx[22m
-[2m21:25:51[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
-[2m21:25:51[22m [36m[1m[vite][22m[39m server restarted.
-[2m21:29:58[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:32:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:34:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:34:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
-[2m21:34:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PlaylistCollection.jsx[22m
-[2m21:35:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:35:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PlaylistCollection.jsx[22m
-[2m21:36:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:36:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PlaylistCollection.jsx[22m
-[2m21:38:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:39:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:41:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PlaylistCollection.jsx[22m
-[2m21:41:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
-[2m21:41:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AuthStatusCard.jsx[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PlaylistCollection.jsx[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/AuthPage.jsx[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mvite.config.js changed, restarting server...[39m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/main.jsx[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/services/spotifyApi.js[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/services/spotifyAuth.js[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles/global.css[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/utils/pkce.js[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/utils/storage.js[22m
-[2m21:43:01[22m [36m[1m[vite][22m[39m server restarted.
-[2m21:46:36[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2mindex.html[22m
-[2m21:46:54[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33mreact, react-dom/client[32m[39m
-[2m21:46:54[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
-[2m21:50:35[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.jsx[22m
-[2m21:50:35[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/AuthPage.jsx[22m
-[2m21:50:35[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AuthStatusCard.jsx[22m
-[2m21:50:35[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PlaylistCollection.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AuthStatusCard.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/AuthPage.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PlaylistCollection.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AuthStatusCard.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/AuthPage.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PlaylistCollection.jsx[22m
-[2m21:54:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.jsx[22m
-[2m21:55:00[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AuthStatusCard.jsx[22m
-[2m21:55:00[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/AuthPage.jsx[22m
-[2m21:55:00[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PlaylistCollection.jsx[22m
-[2m21:55:00[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.jsx[22m
-[2m21:55:26[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AuthStatusCard.jsx[22m
-[2m21:55:26[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/AuthPage.jsx[22m
-[2m21:55:26[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PlaylistCollection.jsx[22m
-[2m21:55:26[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.jsx[22m
-[2m21:56:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AuthStatusCard.jsx[22m
-[2m21:56:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/AuthPage.jsx[22m
-[2m21:56:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/PlaylistCollection.jsx[22m
-[2m21:56:37[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/App.jsx[22m

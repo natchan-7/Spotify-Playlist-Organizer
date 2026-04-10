@@ -85,6 +85,20 @@ function PlaylistCollection({ playlists, playlistsError, playlistsStatus }) {
                     {decodeDescription(playlist.description)}
                   </p>
                 )}
+                <div className="playlist-card-footer">
+                  {playlist.spotifyUrl ? (
+                    <a
+                      className="playlist-link"
+                      href={playlist.spotifyUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open in Spotify
+                    </a>
+                  ) : (
+                    <span className="playlist-link disabled">Spotify link unavailable</span>
+                  )}
+                </div>
               </div>
             </article>
           ))}
