@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AuthPage from "./pages/AuthPage";
 import {
+  fetchArtistGenres,
   fetchCurrentUserPlaylists,
   fetchCurrentUserProfile,
   fetchPlaylistTracks,
@@ -13,9 +14,12 @@ import {
   getSpotifySession,
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
-import { mergeTrackTagsIntoTracks } from "./utils/trackTags";
+import {
+  mergeAutoTagsIntoTracks,
+  mergeTrackTagsIntoTracks,
+} from "./utils/trackTags";
 
-function getSpotifyApiErrorMessage(error, fallbackMessage) {
+function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
   if (!(error instanceof Error)) {
     return fallbackMessage;
   }
@@ -27,7 +31,10 @@ function getSpotifyApiErrorMessage(error, fallbackMessage) {
   }
 
   if (status === 403) {
-    return "Spotify returned Forbidden. Spotify only returns playlist items for playlists you own or collaborate on.";
+    return (
+      forbiddenMessage ||
+      "Spotify returned Forbidden. Log out and log in again, then confirm your Spotify app user access."
+    );
   }
 
   return error.message || fallbackMessage;
@@ -70,9 +77,12 @@ function App() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [currentUserMarket, setCurrentUserMarket] = useState(() => getMarketFromBrowser());
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
+  const [rawTracks, setRawTracks] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [tracksStatus, setTracksStatus] = useState("idle");
   const [tracksError, setTracksError] = useState("");
+  const [genreStatus, setGenreStatus] = useState("idle");
+  const [genreError, setGenreError] = useState("");
   const redirectUri = getSpotifyRedirectUri();
 
   const selectedPlaylist =
@@ -124,9 +134,12 @@ function App() {
     setCurrentUserId("");
     setCurrentUserMarket(getMarketFromBrowser());
     setSelectedPlaylistId(null);
+    setRawTracks([]);
     setTracks([]);
     setTracksStatus("idle");
     setTracksError("");
+    setGenreStatus("idle");
+    setGenreError("");
   }
 
   async function handleLogin() {
@@ -151,9 +164,12 @@ function App() {
       setCurrentUserId("");
       setCurrentUserMarket(getMarketFromBrowser());
       setSelectedPlaylistId(null);
+      setRawTracks([]);
       setTracks([]);
       setTracksStatus("idle");
       setTracksError("");
+      setGenreStatus("idle");
+      setGenreError("");
       return;
     }
 
@@ -223,9 +239,12 @@ function App() {
 
   useEffect(() => {
     if (!session?.accessToken || !selectedPlaylist) {
+      setRawTracks([]);
       setTracks([]);
       setTracksStatus("idle");
       setTracksError("");
+      setGenreStatus("idle");
+      setGenreError("");
       return;
     }
 
@@ -234,6 +253,8 @@ function App() {
     async function loadTracks() {
       setTracksStatus("loading");
       setTracksError("");
+      setGenreStatus("idle");
+      setGenreError("");
 
       try {
         const nextTracks = await fetchPlaylistTracks(
@@ -243,18 +264,23 @@ function App() {
         );
 
         if (!ignore) {
+          setRawTracks(nextTracks);
           setTracks(mergeTrackTagsIntoTracks(nextTracks));
           setTracksStatus("success");
         }
       } catch (error) {
         if (!ignore) {
+          setRawTracks([]);
           const message = getSpotifyApiErrorMessage(
             error,
-            "Failed to fetch Spotify playlist tracks."
+            "Failed to fetch Spotify playlist tracks.",
+            "Spotify returned Forbidden. Spotify only returns playlist items for playlists you own or collaborate on."
           );
           setTracks([]);
           setTracksError(message);
           setTracksStatus("error");
+          setGenreStatus("idle");
+          setGenreError("");
         }
       }
     }
@@ -265,6 +291,72 @@ function App() {
       ignore = true;
     };
   }, [session, selectedPlaylist, currentUserMarket]);
+
+  useEffect(() => {
+    if (!session?.accessToken || !selectedPlaylist || tracksStatus !== "success") {
+      setGenreStatus("idle");
+      setGenreError("");
+      return;
+    }
+
+    if (rawTracks.length === 0) {
+      setGenreStatus("success");
+      setGenreError("");
+      return;
+    }
+
+    const artistIds = Array.from(
+      new Set(
+        rawTracks.flatMap((track) =>
+          (track.artists || [])
+            .map((artist) => artist.id)
+            .filter(Boolean)
+        )
+      )
+    );
+
+    if (artistIds.length === 0) {
+      setTracks(mergeAutoTagsIntoTracks(rawTracks, {}));
+      setGenreStatus("success");
+      setGenreError("");
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadGenres() {
+      setGenreStatus("loading");
+      setGenreError("");
+
+      try {
+        const artistGenresByArtistId = await fetchArtistGenres(
+          session.accessToken,
+          artistIds
+        );
+
+        if (!ignore) {
+          setTracks(mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId));
+          setGenreStatus("success");
+        }
+      } catch (error) {
+        if (!ignore) {
+          const message = getSpotifyApiErrorMessage(
+            error,
+            "Failed to fetch Spotify artist genres."
+          );
+          setTracks(mergeTrackTagsIntoTracks(rawTracks));
+          setGenreError(message);
+          setGenreStatus("error");
+        }
+      }
+    }
+
+    loadGenres();
+
+    return () => {
+      ignore = true;
+    };
+  }, [session, selectedPlaylist, tracksStatus, rawTracks]);
 
   function handleSelectPlaylist(playlistId) {
     setSelectedPlaylistId(playlistId);
@@ -285,6 +377,8 @@ function App() {
       redirectUri={redirectUri}
       session={session}
       selectedPlaylist={selectedPlaylist}
+      genreError={genreError}
+      genreStatus={genreStatus}
       tracks={tracks}
       tracksError={tracksError}
       tracksStatus={tracksStatus}

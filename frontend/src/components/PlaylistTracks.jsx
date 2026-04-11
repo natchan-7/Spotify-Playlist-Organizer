@@ -25,16 +25,34 @@ function getTrackArtworkFallback(trackName) {
 }
 
 function PlaylistTracks({
+  genreError,
+  genreStatus,
   selectedPlaylist,
   tracks,
   tracksError,
   tracksStatus,
 }) {
+  function getAutoTagStatusLabel() {
+    if (genreStatus === "success") {
+      return "Auto tags ready";
+    }
+
+    if (genreStatus === "loading") {
+      return "Preparing auto tags";
+    }
+
+    if (genreStatus === "error") {
+      return "Auto tags unavailable";
+    }
+
+    return "Auto tags idle";
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Step 3 / Tracks</p>
+          <p className="eyebrow">Step 3 / Tracks + Step 4 / Auto Tags</p>
           <h2>Playlist tracks</h2>
           {selectedPlaylist && (
             <>
@@ -46,7 +64,14 @@ function PlaylistTracks({
           )}
         </div>
         {tracksStatus === "success" && selectedPlaylist && (
-          <span className="playlist-count">{tracks.length} loaded</span>
+          <div className="track-status-group">
+            <span className="playlist-count">{tracks.length} loaded</span>
+            {tracks.length > 0 && (
+              <span className="playlist-count playlist-count-secondary">
+                {getAutoTagStatusLabel()}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -77,6 +102,26 @@ function PlaylistTracks({
           </p>
         </div>
       )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        tracks.length > 0 &&
+        genreStatus === "loading" && (
+          <div className="notice">
+            <p>Preparing automatic genre tags from the playlist artists...</p>
+          </div>
+        )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        tracks.length > 0 &&
+        genreStatus === "error" &&
+        genreError && (
+          <div className="notice error">
+            <p>Tracks loaded, but automatic genre tags could not be prepared.</p>
+            <p>{genreError}</p>
+          </div>
+        )}
 
       {selectedPlaylist && tracksStatus === "success" && tracks.length > 0 && (
         <div className="track-list">

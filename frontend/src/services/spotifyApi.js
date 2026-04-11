@@ -237,3 +237,43 @@ export async function fetchPlaylistTracks(accessToken, playlist, market) {
 
   return tracks;
 }
+
+function createArtistGenresMap(artists) {
+  return Object.fromEntries(
+    artists
+      .filter((artist) => artist?.id)
+      .map((artist) => [artist.id, Array.isArray(artist.genres) ? artist.genres : []])
+  );
+}
+
+export async function fetchArtistGenres(accessToken, artistIds) {
+  const normalizedArtistIds = Array.from(
+    new Set(artistIds.filter((artistId) => typeof artistId === "string" && artistId))
+  );
+
+  if (normalizedArtistIds.length === 0) {
+    return {};
+  }
+
+  const artistGenresByArtistId = {};
+
+  for (let index = 0; index < normalizedArtistIds.length; index += 50) {
+    const chunk = normalizedArtistIds.slice(index, index + 50);
+    const url = new URL(`${SPOTIFY_API_URL}/artists`);
+
+    url.searchParams.set("ids", chunk.join(","));
+
+    const payload = await fetchSpotifyPage(
+      url.toString(),
+      accessToken,
+      "Failed to fetch Spotify artist genres."
+    );
+
+    Object.assign(
+      artistGenresByArtistId,
+      createArtistGenresMap(payload.artists || [])
+    );
+  }
+
+  return artistGenresByArtistId;
+}

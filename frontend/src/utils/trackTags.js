@@ -7,6 +7,35 @@ function createEmptyTags() {
   };
 }
 
+function dedupeTextList(values) {
+  return Array.from(
+    new Set(
+      values
+        .filter((value) => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function normalizeGenreTags(genres) {
+  return dedupeTextList(
+    genres.map((genre) => (typeof genre === "string" ? genre.toLowerCase() : genre))
+  );
+}
+
+function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
+  const genres = (track.artists || []).flatMap((artist) => {
+    if (!artist?.id) {
+      return [];
+    }
+
+    return artistGenresByArtistId?.[artist.id] || [];
+  });
+
+  return normalizeGenreTags(genres);
+}
+
 export function getStoredTrackTagsMap() {
   const value = localStorage.getItem(TRACK_TAGS_KEY);
 
@@ -35,8 +64,8 @@ export function getTrackTags(trackId, trackTagsMap = getStoredTrackTagsMap()) {
   }
 
   return {
-    auto: Array.isArray(tags.auto) ? tags.auto : [],
-    user: Array.isArray(tags.user) ? tags.user : [],
+    auto: Array.isArray(tags.auto) ? dedupeTextList(tags.auto) : [],
+    user: Array.isArray(tags.user) ? dedupeTextList(tags.user) : [],
   };
 }
 
@@ -50,6 +79,26 @@ export function mergeTrackTagsIntoTracks(
     return {
       ...track,
       autoTags: tags.auto,
+      userTags: tags.user,
+    };
+  });
+}
+
+export function mergeAutoTagsIntoTracks(
+  tracks,
+  artistGenresByArtistId,
+  trackTagsMap = getStoredTrackTagsMap()
+) {
+  return tracks.map((track) => {
+    const tags = getTrackTags(track.id, trackTagsMap);
+    const generatedAutoTags =
+      tags.auto.length > 0
+        ? tags.auto
+        : buildAutoTagsFromArtistGenres(track, artistGenresByArtistId);
+
+    return {
+      ...track,
+      autoTags: generatedAutoTags,
       userTags: tags.user,
     };
   });
