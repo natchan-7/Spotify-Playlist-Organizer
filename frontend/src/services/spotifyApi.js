@@ -295,16 +295,28 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
 
     url.searchParams.set("ids", chunk.join(","));
 
-    const payload = await fetchSpotifyPage(
-      url.toString(),
-      accessToken,
-      "Failed to fetch Spotify artist genres."
-    );
+    try {
+      const payload = await fetchSpotifyPage(
+        url.toString(),
+        accessToken,
+        "Failed to fetch Spotify artist genres."
+      );
 
-    Object.assign(
-      artistGenresByArtistId,
-      createArtistGenresMap(payload.artists || [])
-    );
+      Object.assign(
+        artistGenresByArtistId,
+        createArtistGenresMap(payload.artists || [])
+      );
+    } catch (error) {
+      if (error instanceof Error && error.status === 403) {
+        Object.assign(
+          artistGenresByArtistId,
+          await fetchArtistGenresIndividually(accessToken, chunk)
+        );
+        continue;
+      }
+
+      throw error;
+    }
   }
 
   return artistGenresByArtistId;
@@ -314,10 +326,19 @@ async function fetchArtistGenresIndividually(accessToken, artistIds) {
   const artistGenresByArtistId = {};
 
   for (const artistId of artistIds) {
-    Object.assign(
-      artistGenresByArtistId,
-      await fetchSingleArtistGenres(accessToken, artistId)
-    );
+    try {
+      Object.assign(
+        artistGenresByArtistId,
+        await fetchSingleArtistGenres(accessToken, artistId)
+      );
+    } catch (error) {
+      if (error instanceof Error && error.status === 403) {
+        artistGenresByArtistId[artistId] = [];
+        continue;
+      }
+
+      throw error;
+    }
   }
 
   return artistGenresByArtistId;
@@ -332,13 +353,5 @@ export async function fetchArtistGenres(accessToken, artistIds) {
     return {};
   }
 
-  try {
-    return await fetchArtistGenresInChunks(accessToken, normalizedArtistIds);
-  } catch (error) {
-    if (error instanceof Error && error.status === 403) {
-      return fetchArtistGenresIndividually(accessToken, normalizedArtistIds);
-    }
-
-    throw error;
-  }
+  return fetchArtistGenresInChunks(accessToken, normalizedArtistIds);
 }

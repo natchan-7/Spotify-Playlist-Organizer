@@ -41,6 +41,14 @@ function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
     );
   }
 
+  if (status === 429) {
+    if (typeof error.retryAfter === "number" && Number.isFinite(error.retryAfter)) {
+      return `Spotify rate limit reached. Wait about ${error.retryAfter} seconds and try again.`;
+    }
+
+    return "Spotify rate limit reached. Wait a moment and try again.";
+  }
+
   return error.message || fallbackMessage;
 }
 
