@@ -6,6 +6,22 @@ function createAuthorizedHeaders(accessToken) {
   };
 }
 
+async function parseJsonSafely(response) {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {
+      message: text,
+    };
+  }
+}
+
 function createPlaylistTracksHref(playlist) {
   if (playlist.tracks?.href) {
     return playlist.tracks.href;
@@ -68,13 +84,25 @@ async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
   const response = await fetch(url, {
     headers: createAuthorizedHeaders(accessToken),
   });
-  const payload = await response.json();
+  const payload = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const message =
-      payload?.error?.message || fallbackMessage || "Failed to fetch Spotify playlists.";
+    const retryAfter = response.headers.get("Retry-After");
+    let message =
+      payload?.error?.message ||
+      payload?.message ||
+      fallbackMessage ||
+      "Failed to fetch Spotify playlists.";
+
+    if (response.status === 429) {
+      message = retryAfter
+        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
+        : "Spotify rate limit reached. Wait a moment and try again.";
+    }
+
     const error = new Error(message);
     error.status = response.status;
+    error.retryAfter = retryAfter ? Number(retryAfter) : null;
     throw error;
   }
 
@@ -97,7 +125,7 @@ async function fetchPlaylistTrackTotal(accessToken, playlist) {
     return playlist.totalTracks;
   }
 
-  const payload = await response.json();
+  const payload = await parseJsonSafely(response);
   const totalTracks = Number(payload?.total);
 
   return Number.isFinite(totalTracks) ? totalTracks : playlist.totalTracks;
