@@ -153,6 +153,8 @@ function createTrackDiagnostics(market) {
     pagesFetched: 0,
     rawItems: 0,
     normalizedTracks: 0,
+    itemFieldTracks: 0,
+    deprecatedTrackFieldTracks: 0,
     nullTrackItems: 0,
     localTrackItems: 0,
     unsupportedTypeItems: 0,
@@ -161,7 +163,13 @@ function createTrackDiagnostics(market) {
 }
 
 function normalizeTrackItem(item, diagnostics) {
-  const track = item?.track;
+  const track = item?.item || item?.track;
+
+  if (item?.item) {
+    diagnostics.itemFieldTracks += 1;
+  } else if (item?.track) {
+    diagnostics.deprecatedTrackFieldTracks += 1;
+  }
 
   if (!track) {
     diagnostics.nullTrackItems += 1;
