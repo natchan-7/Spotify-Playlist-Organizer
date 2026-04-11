@@ -33,13 +33,19 @@ function normalizePlaylist(playlist) {
   const tracksTotalFromNestedItemsArray = Array.isArray(playlist.items?.items)
     ? playlist.items.items.length
     : Number.NaN;
-  const normalizedTotalTracks = Number.isFinite(tracksTotalFromObject)
-    ? tracksTotalFromObject
-    : Number.isFinite(tracksTotalFromItemsObject)
-      ? tracksTotalFromItemsObject
-      : Number.isFinite(tracksTotalFromNestedItemsArray)
-        ? tracksTotalFromNestedItemsArray
-        : tracksTotalFromItemsArray;
+  let normalizedTotalTracks = tracksTotalFromItemsArray;
+
+  if (Number.isFinite(tracksTotalFromNestedItemsArray)) {
+    normalizedTotalTracks = tracksTotalFromNestedItemsArray;
+  }
+
+  if (Number.isFinite(tracksTotalFromItemsObject)) {
+    normalizedTotalTracks = tracksTotalFromItemsObject;
+  }
+
+  if (Number.isFinite(tracksTotalFromObject)) {
+    normalizedTotalTracks = tracksTotalFromObject;
+  }
 
   return {
     id: playlist.id,
@@ -57,7 +63,7 @@ function normalizePlaylist(playlist) {
   };
 }
 
-async function fetchSpotifyPage(url, accessToken) {
+async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
   const response = await fetch(url, {
     headers: createAuthorizedHeaders(accessToken),
   });
@@ -65,7 +71,7 @@ async function fetchSpotifyPage(url, accessToken) {
 
   if (!response.ok) {
     const message =
-      payload?.error?.message || "Failed to fetch Spotify playlists.";
+      payload?.error?.message || fallbackMessage || "Failed to fetch Spotify playlists.";
     throw new Error(message);
   }
 
@@ -99,7 +105,11 @@ export async function fetchCurrentUserPlaylists(accessToken) {
   let nextUrl = `${SPOTIFY_API_URL}/me/playlists?limit=50`;
 
   while (nextUrl) {
-    const payload = await fetchSpotifyPage(nextUrl, accessToken);
+    const payload = await fetchSpotifyPage(
+      nextUrl,
+      accessToken,
+      "Failed to fetch Spotify playlists."
+    );
     playlists.push(...(payload.items || []).map(normalizePlaylist));
     nextUrl = payload.next;
   }
@@ -118,4 +128,74 @@ export async function fetchCurrentUserPlaylists(accessToken) {
       };
     })
   );
+}
+
+function normalizeTrackItem(item) {
+  const track = item?.track;
+
+  if (!track || item?.is_local || track.is_local) {
+    return null;
+  }
+
+  if (!track.id) {
+    return null;
+  }
+
+  return {
+    id: track.id,
+    uri: track.uri,
+    name: track.name,
+    album: track.album?.name || "",
+    durationMs: Number(track.duration_ms) || 0,
+    thumbnailUrl: track.album?.images?.[track.album.images.length - 1]?.url || "",
+    artists: (track.artists || []).map((artist) => ({
+      id: artist.id,
+      name: artist.name,
+    })),
+    autoTags: [],
+    userTags: [],
+  };
+}
+
+function getPlaylistTracksUrl(playlist) {
+  if (playlist.tracksHref) {
+    return playlist.tracksHref;
+  }
+
+  if (!playlist.id) {
+    return "";
+  }
+
+  return `${SPOTIFY_API_URL}/playlists/${playlist.id}/tracks`;
+}
+
+export async function fetchPlaylistTracks(accessToken, playlist) {
+  const tracks = [];
+  const baseUrl = getPlaylistTracksUrl(playlist);
+
+  if (!baseUrl) {
+    return tracks;
+  }
+
+  let nextUrl = baseUrl;
+
+  while (nextUrl) {
+    const url = new URL(nextUrl);
+    url.searchParams.set("limit", "100");
+
+    const payload = await fetchSpotifyPage(
+      url.toString(),
+      accessToken,
+      "Failed to fetch Spotify playlist tracks."
+    );
+
+    const normalized = (payload.items || [])
+      .map(normalizeTrackItem)
+      .filter(Boolean);
+
+    tracks.push(...normalized);
+    nextUrl = payload.next;
+  }
+
+  return tracks;
 }

@@ -1,4 +1,4 @@
-import React from "react";
+/* eslint-disable react/prop-types */
 
 function decodeDescription(description) {
   if (!description) {
@@ -18,7 +18,13 @@ function getVisibilityLabel(playlist) {
   return playlist.isPublic ? "Public" : "Private";
 }
 
-function PlaylistCollection({ playlists, playlistsError, playlistsStatus }) {
+function PlaylistCollection({
+  playlists,
+  playlistsError,
+  playlistsStatus,
+  onSelectPlaylist,
+  selectedPlaylistId,
+}) {
   return (
     <section className="panel">
       <div className="panel-header">
@@ -58,7 +64,14 @@ function PlaylistCollection({ playlists, playlistsError, playlistsStatus }) {
       {playlistsStatus === "success" && playlists.length > 0 && (
         <div className="playlist-grid">
           {playlists.map((playlist) => (
-            <article key={playlist.id} className="playlist-card">
+            <article
+              key={playlist.id}
+              className={
+                playlist.id === selectedPlaylistId
+                  ? "playlist-card playlist-card-selected"
+                  : "playlist-card"
+              }
+            >
               <div className="playlist-artwork">
                 {playlist.imageUrl ? (
                   <img
@@ -98,6 +111,16 @@ function PlaylistCollection({ playlists, playlistsError, playlistsStatus }) {
                   ) : (
                     <span className="playlist-link disabled">Spotify link unavailable</span>
                   )}
+                  <button
+                    className="playlist-select-button"
+                    type="button"
+                    onClick={() => onSelectPlaylist?.(playlist.id)}
+                    disabled={playlist.id === selectedPlaylistId}
+                  >
+                    {playlist.id === selectedPlaylistId
+                      ? "Selected"
+                      : "View tracks"}
+                  </button>
                 </div>
               </div>
             </article>

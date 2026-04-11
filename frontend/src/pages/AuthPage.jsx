@@ -1,6 +1,7 @@
-import React from "react";
+/* eslint-disable react/prop-types */
 import AuthStatusCard from "../components/AuthStatusCard";
 import PlaylistCollection from "../components/PlaylistCollection";
+import PlaylistTracks from "../components/PlaylistTracks";
 
 function AuthPage(props) {
   return (
@@ -13,6 +14,14 @@ function AuthPage(props) {
           playlists={props.playlists}
           playlistsError={props.playlistsError}
           playlistsStatus={props.playlistsStatus}
+          onSelectPlaylist={props.onSelectPlaylist}
+          selectedPlaylistId={props.selectedPlaylist?.id || null}
+        />
+        <PlaylistTracks
+          selectedPlaylist={props.selectedPlaylist}
+          tracks={props.tracks}
+          tracksError={props.tracksError}
+          tracksStatus={props.tracksStatus}
         />
       </div>
     </main>
