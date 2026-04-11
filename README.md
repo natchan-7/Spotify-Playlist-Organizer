@@ -28,25 +28,33 @@ Notes:
 
 Next target: Step 3, "Fetch and display tracks".
 
-## Cloudflare Pages
+## Cloudflare
 
-This frontend is deployable to Cloudflare Pages as a static Vite site.
+This frontend can be deployed from the Cloudflare dashboard using Worker Builds.
 
-Recommended deployment flow:
+If your dashboard does not show an output directory field, that is expected.
+The static asset directory is defined in `frontend/wrangler.toml`.
 
-1. Create a Cloudflare Pages project from this GitHub repository
-2. Set the Pages root directory to `frontend`
-3. Set the build command to `npm run build`
-4. Set the build output directory to `dist`
-5. In Pages environment variables, set `VITE_SPOTIFY_CLIENT_ID`
-6. Do not set `VITE_SPOTIFY_REDIRECT_URI` unless you need a fixed callback URL
-7. After the first deploy, register your production URL in Spotify, for example `https://your-project.pages.dev/`
-8. Re-deploy and test the full login flow on the deployed URL
+Recommended Worker Build settings:
 
-Wrangler direct-upload support is also prepared in `frontend/wrangler.toml`.
+1. Root directory: `frontend`
+2. Build command: `npm run build`
+3. Deploy command: `npm run cf:deploy`
+4. Version command: `npm run cf:versions`
+5. Variables and secrets: add `VITE_SPOTIFY_CLIENT_ID`
+6. Leave `VITE_SPOTIFY_REDIRECT_URI` unset unless you need a fixed callback URL
+
+`frontend/wrangler.toml` serves the built app from `./dist` and uses SPA fallback routing.
+
+After the first successful deploy:
+
+1. Open the deployed Cloudflare URL from the `Visit` button
+2. Confirm the redirect URI shown on the login card
+3. Register that exact URL in the Spotify app settings
+4. Re-deploy if needed and test the login flow again
 
 Important:
 
 - Cloudflare CLI authentication is still required on the machine that deploys
 - Spotify redirect URIs must exactly match the deployed URL
-- Preview deployments may not work with Spotify OAuth unless that exact preview URL is also registered in Spotify
+- Preview URLs may fail Spotify OAuth unless that exact preview URL is also registered in Spotify

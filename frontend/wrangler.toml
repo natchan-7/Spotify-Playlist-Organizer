@@ -1,6 +1,10 @@
-# Cloudflare Pages configuration for direct uploads with Wrangler.
-# If you create a Pages project with a different name, update `name`.
+# Cloudflare Worker configuration for serving the built Vite app as static assets.
+# The dashboard Build screen does not need an "output directory" field when this
+# file defines the assets directory.
 
 name = "spotify-playlist-organizer"
-pages_build_output_dir = "./dist"
 compatibility_date = "2026-04-11"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
