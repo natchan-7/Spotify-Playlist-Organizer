@@ -25,6 +25,7 @@ Completed:
 
 - Step 1: Spotify OAuth login
 - Step 2: Fetch and display playlists
+- Step 3: Fetch and display tracks for the selected playlist
 
 Already implemented in `frontend/`:
 
@@ -34,8 +35,11 @@ Already implemented in `frontend/`:
 - Spotify session persistence in localStorage
 - playlist fetch with pagination
 - normalized playlist cards with artwork, owner, visibility, track count, and Spotify link
+- on-demand playlist track fetch with pagination
+- market-aware playlist track requests
+- `trackTags` storage helpers for later steps
 
-The next implementation target is Step 3.
+The next implementation target is Step 4.
 
 ---
 
@@ -129,6 +133,7 @@ Keep these scopes unless a future step truly requires more:
 - `playlist-read-collaborative`
 - `playlist-modify-private`
 - `playlist-modify-public`
+- `user-read-private`
 
 ### Storage Rules
 
@@ -196,6 +201,7 @@ This is already established by the Step 2 implementation.
   name: string,
   description: string,
   imageUrl: string,
+  ownerId: string,
   ownerName: string,
   totalTracks: number,
   tracksHref: string,
@@ -210,6 +216,7 @@ Rules:
 - keep this shape stable
 - playlist cards and later track fetch flows should use this normalized object
 - if playlist track totals are missing or zero, a lightweight fallback request may be used to recover the total
+- `ownerId` is required because Step 3 needs to distinguish user-owned playlists from followed playlists that may reject track access
 
 ### Track Tag Storage
 
@@ -263,6 +270,7 @@ Rules:
 - `autoTags` and `userTags` are UI-ready values derived from `trackTags`
 - do not persist normalized tracks in localStorage
 - track fetch results should remain sourced from Spotify, not from a local cache
+- if Spotify omits `track.id`, a fallback ID may be used for rendering, but future tag and playlist-generation logic should prefer the true Spotify track ID or URI when available
 
 ---
 
@@ -290,6 +298,7 @@ Rules:
 - fetch all user playlists with pagination
 - use `limit=50` for `/me/playlists`
 - normalize each playlist before it reaches UI components
+- note that `/me/playlists` can include followed playlists owned by other users
 
 ### Track Fetch Rules
 
@@ -301,12 +310,16 @@ Do:
 - add an explicit selected-playlist state
 - fetch tracks only after a playlist is selected
 - support Spotify pagination for playlist tracks
-- ignore local tracks for which `track` is null
+- request playlist items with the user's market when available
+- read playlist items from `item` first, because Spotify's `track` field is deprecated
+- ignore local tracks and unsupported non-track items
+- show clear messaging when a playlist is visible but its items are not accessible
 
 Do not:
 
 - eagerly fetch tracks for every playlist during Step 3
 - couple playlist list rendering to track fetch logic
+- assume every playlist visible in `/me/playlists` will allow `/playlists/{id}/tracks`
 
 ### Genre Fetch Rules
 
@@ -375,6 +388,8 @@ Status: complete
 
 Fetch and display tracks for the selected playlist.
 
+Status: complete
+
 Required scope:
 
 - add selected playlist state
@@ -385,6 +400,8 @@ Required scope:
 ### Step 4
 
 Fetch artist genres and prepare auto tags.
+
+Status: next
 
 Required scope:
 

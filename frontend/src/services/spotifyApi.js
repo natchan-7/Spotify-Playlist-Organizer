@@ -52,6 +52,7 @@ function normalizePlaylist(playlist) {
     name: playlist.name,
     description: playlist.description || "",
     imageUrl: playlist.images?.[0]?.url || "",
+    ownerId: playlist.owner?.id || "",
     ownerName: playlist.owner?.display_name || playlist.owner?.id || "Unknown",
     totalTracks: Number.isFinite(normalizedTotalTracks)
       ? normalizedTotalTracks
@@ -72,7 +73,9 @@ async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
   if (!response.ok) {
     const message =
       payload?.error?.message || fallbackMessage || "Failed to fetch Spotify playlists.";
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return payload;
@@ -130,24 +133,54 @@ export async function fetchCurrentUserPlaylists(accessToken) {
   );
 }
 
-function normalizeTrackItem(item) {
-  const track = item?.track;
+export async function fetchCurrentUserProfile(accessToken) {
+  const payload = await fetchSpotifyPage(
+    `${SPOTIFY_API_URL}/me`,
+    accessToken,
+    "Failed to fetch the current Spotify user profile."
+  );
 
-  if (!track || item?.is_local || track.is_local) {
+  return {
+    id: payload.id || "",
+    displayName: payload.display_name || payload.id || "Unknown",
+    country: payload.country || "",
+  };
+}
+
+function normalizeTrackItem(item) {
+  const track = item?.item || item?.track;
+
+  if (!track) {
     return null;
   }
 
-  if (!track.id) {
+  if (item?.is_local || track.is_local) {
     return null;
+  }
+
+  if (track.type && track.type !== "track") {
+    return null;
+  }
+
+  let normalizedId = track.id || track.uri;
+
+  if (!normalizedId) {
+    normalizedId = [
+      track.name,
+      item?.added_at,
+      track.artists?.map((artist) => artist.name).join("-"),
+    ]
+      .filter(Boolean)
+      .join("-");
   }
 
   return {
-    id: track.id,
-    uri: track.uri,
+    id: normalizedId,
+    uri: track.uri || "",
     name: track.name,
     album: track.album?.name || "",
     durationMs: Number(track.duration_ms) || 0,
-    thumbnailUrl: track.album?.images?.[track.album.images.length - 1]?.url || "",
+    thumbnailUrl: track.album?.images?.[0]?.url || "",
     artists: (track.artists || []).map((artist) => ({
       id: artist.id,
       name: artist.name,
@@ -169,7 +202,7 @@ function getPlaylistTracksUrl(playlist) {
   return `${SPOTIFY_API_URL}/playlists/${playlist.id}/tracks`;
 }
 
-export async function fetchPlaylistTracks(accessToken, playlist) {
+export async function fetchPlaylistTracks(accessToken, playlist, market) {
   const tracks = [];
   const baseUrl = getPlaylistTracksUrl(playlist);
 
@@ -182,6 +215,11 @@ export async function fetchPlaylistTracks(accessToken, playlist) {
   while (nextUrl) {
     const url = new URL(nextUrl);
     url.searchParams.set("limit", "100");
+    url.searchParams.set("additional_types", "track");
+
+    if (market) {
+      url.searchParams.set("market", market);
+    }
 
     const payload = await fetchSpotifyPage(
       url.toString(),

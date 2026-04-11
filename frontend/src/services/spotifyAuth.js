@@ -21,6 +21,7 @@ const SPOTIFY_SCOPES = [
   "playlist-read-collaborative",
   "playlist-modify-private",
   "playlist-modify-public",
+  "user-read-private",
 ].join(" ");
 
 function getClientId() {

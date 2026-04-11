@@ -1,15 +1,64 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import AuthPage from "./pages/AuthPage";
-import { fetchCurrentUserPlaylists, fetchPlaylistTracks } from "./services/spotifyApi";
 import {
-    beginSpotifyLogin,
-    clearSpotifySession,
-    exchangeCodeForToken,
-    getSpotifyRedirectUri,
-    getSpotifySession,
-    hasAuthCallbackParams,
+  fetchCurrentUserPlaylists,
+  fetchCurrentUserProfile,
+  fetchPlaylistTracks,
+} from "./services/spotifyApi";
+import {
+  beginSpotifyLogin,
+  clearSpotifySession,
+  exchangeCodeForToken,
+  getSpotifyRedirectUri,
+  getSpotifySession,
+  hasAuthCallbackParams,
 } from "./services/spotifyAuth";
+import { mergeTrackTagsIntoTracks } from "./utils/trackTags";
+
+function getSpotifyApiErrorMessage(error, fallbackMessage) {
+  if (!(error instanceof Error)) {
+    return fallbackMessage;
+  }
+
+  const status = error.status;
+
+  if (status === 401) {
+    return "Spotify session expired. Please log in again.";
+  }
+
+  if (status === 403) {
+    return "Spotify returned Forbidden. Spotify only returns playlist items for playlists you own or collaborate on.";
+  }
+
+  return error.message || fallbackMessage;
+}
+
+function getMarketFromBrowser() {
+  const runtimeLocale = Intl.DateTimeFormat().resolvedOptions().locale;
+  const locales = [runtimeLocale, navigator.language, ...(navigator.languages || [])].filter(Boolean);
+
+  for (const locale of locales) {
+    if (typeof Intl.Locale === "function") {
+      try {
+        const expandedLocale = new Intl.Locale(locale).maximize();
+
+        if (expandedLocale.region && /^[A-Z]{2}$/i.test(expandedLocale.region)) {
+          return expandedLocale.region.toUpperCase();
+        }
+      } catch (error) {
+        // Ignore locale parsing issues and continue with the simpler fallback.
+      }
+    }
+
+    const parts = locale.split("-");
+
+    if (parts.length > 1 && /^[A-Z]{2}$/i.test(parts[1])) {
+      return parts[1].toUpperCase();
+    }
+  }
+
+  return "";
+}
 
 function App() {
   const [session, setSession] = useState(() => getSpotifySession());
@@ -18,15 +67,16 @@ function App() {
   const [playlists, setPlaylists] = useState([]);
   const [playlistsStatus, setPlaylistsStatus] = useState("idle");
   const [playlistsError, setPlaylistsError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserMarket, setCurrentUserMarket] = useState(() => getMarketFromBrowser());
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [tracks, setTracks] = useState([]);
   const [tracksStatus, setTracksStatus] = useState("idle");
   const [tracksError, setTracksError] = useState("");
+  const redirectUri = getSpotifyRedirectUri();
 
-  const selectedPlaylist = useMemo(
-    () => playlists.find((playlist) => playlist.id === selectedPlaylistId) || null,
-    [playlists, selectedPlaylistId]
-  );
+  const selectedPlaylist =
+    playlists.find((playlist) => playlist.id === selectedPlaylistId) || null;
 
   useEffect(() => {
     if (!hasAuthCallbackParams()) {
@@ -71,6 +121,8 @@ function App() {
     setPlaylists([]);
     setPlaylistsStatus("idle");
     setPlaylistsError("");
+    setCurrentUserId("");
+    setCurrentUserMarket(getMarketFromBrowser());
     setSelectedPlaylistId(null);
     setTracks([]);
     setTracksStatus("idle");
@@ -96,6 +148,8 @@ function App() {
       setPlaylists([]);
       setPlaylistsStatus("idle");
       setPlaylistsError("");
+      setCurrentUserId("");
+      setCurrentUserMarket(getMarketFromBrowser());
       setSelectedPlaylistId(null);
       setTracks([]);
       setTracksStatus("idle");
@@ -110,21 +164,38 @@ function App() {
       setPlaylistsError("");
 
       try {
-        const nextPlaylists = await fetchCurrentUserPlaylists(session.accessToken);
+        const [profileResult, playlistsResult] = await Promise.allSettled([
+          fetchCurrentUserProfile(session.accessToken),
+          fetchCurrentUserPlaylists(session.accessToken),
+        ]);
+
+        if (playlistsResult.status !== "fulfilled") {
+          throw playlistsResult.reason;
+        }
 
         if (!ignore) {
-          setPlaylists(nextPlaylists);
+          if (profileResult.status === "fulfilled") {
+            setCurrentUserId(profileResult.value.id);
+            setCurrentUserMarket(profileResult.value.country || getMarketFromBrowser());
+          } else {
+            setCurrentUserId("");
+            setCurrentUserMarket(getMarketFromBrowser());
+          }
+
+          setPlaylists(playlistsResult.value);
           setPlaylistsStatus("success");
         }
       } catch (error) {
         if (!ignore) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to fetch Spotify playlists.";
+          const message = getSpotifyApiErrorMessage(
+            error,
+            "Failed to fetch Spotify playlists."
+          );
           setPlaylists([]);
           setPlaylistsError(message);
           setPlaylistsStatus("error");
+          setCurrentUserId("");
+          setCurrentUserMarket(getMarketFromBrowser());
         }
       }
     }
@@ -135,6 +206,20 @@ function App() {
       ignore = true;
     };
   }, [session]);
+
+  useEffect(() => {
+    if (!selectedPlaylistId) {
+      return;
+    }
+
+    const hasSelectedPlaylist = playlists.some(
+      (playlist) => playlist.id === selectedPlaylistId
+    );
+
+    if (!hasSelectedPlaylist) {
+      setSelectedPlaylistId(null);
+    }
+  }, [playlists, selectedPlaylistId]);
 
   useEffect(() => {
     if (!session?.accessToken || !selectedPlaylist) {
@@ -153,19 +238,20 @@ function App() {
       try {
         const nextTracks = await fetchPlaylistTracks(
           session.accessToken,
-          selectedPlaylist
+          selectedPlaylist,
+          currentUserMarket
         );
 
         if (!ignore) {
-          setTracks(nextTracks);
+          setTracks(mergeTrackTagsIntoTracks(nextTracks));
           setTracksStatus("success");
         }
       } catch (error) {
         if (!ignore) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to fetch Spotify playlist tracks.";
+          const message = getSpotifyApiErrorMessage(
+            error,
+            "Failed to fetch Spotify playlist tracks."
+          );
           setTracks([]);
           setTracksError(message);
           setTracksStatus("error");
@@ -178,7 +264,7 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [session, selectedPlaylist]);
+  }, [session, selectedPlaylist, currentUserMarket]);
 
   function handleSelectPlaylist(playlistId) {
     setSelectedPlaylistId(playlistId);
@@ -195,7 +281,8 @@ function App() {
       playlistsCount={playlists.length}
       playlistsError={playlistsError}
       playlistsStatus={playlistsStatus}
-      redirectUri={getSpotifyRedirectUri()}
+      currentUserId={currentUserId}
+      redirectUri={redirectUri}
       session={session}
       selectedPlaylist={selectedPlaylist}
       tracks={tracks}

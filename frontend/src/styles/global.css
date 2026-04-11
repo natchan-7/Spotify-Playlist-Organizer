@@ -211,6 +211,13 @@ code {
   overflow: hidden;
 }
 
+.playlist-helper {
+  margin: 0;
+  color: #f3c98b;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
 .playlist-card-footer {
   display: flex;
   justify-content: space-between;
@@ -243,9 +250,14 @@ code {
   font-size: 0.85rem;
 }
 
+.playlist-select-button:hover {
+  transform: translateY(-1px);
+}
+
 .playlist-select-button:disabled {
   cursor: default;
   opacity: 0.6;
+  transform: none;
 }
 
 .eyebrow {
@@ -280,6 +292,11 @@ code {
   margin: 0.4rem 0 0;
   color: #bfd0e6;
   font-size: 0.95rem;
+}
+
+.panel-subtitle-muted {
+  color: #9fb1c9;
+  font-size: 0.9rem;
 }
 
 .track-list {
@@ -452,7 +469,9 @@ code {
   }
 
   .panel-header,
-  .playlist-card-top {
+  .playlist-card-top,
+  .playlist-card-footer,
+  .track-title-row {
     flex-direction: column;
   }
 
