@@ -40,6 +40,9 @@ function PlaylistTracks({
   genreError,
   genreStatus,
   selectedPlaylist,
+  tagStorageError,
+  tagStorageStatus,
+  tagStorageSummary,
   tracks,
   tracksError,
   tracksStatus,
@@ -145,6 +148,42 @@ function PlaylistTracks({
               Prepared {totalAutoTagCount} automatic genre tags across{" "}
               {taggedTrackCount} tracks.
             </p>
+          </div>
+        )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        genreStatus === "success" &&
+        tagStorageStatus === "success" &&
+        tagStorageSummary?.updatedTrackCount > 0 && (
+          <div className="notice">
+            <p>
+              Saved {tagStorageSummary.savedAutoTagCount} automatic tags for{" "}
+              {tagStorageSummary.updatedTrackCount} tracks in this browser.
+            </p>
+          </div>
+        )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        genreStatus === "success" &&
+        tagStorageStatus === "success" &&
+        tagStorageSummary &&
+        tagStorageSummary.updatedTrackCount === 0 &&
+        taggedTrackCount > 0 && (
+          <div className="notice">
+            <p>Automatic tags were already stored for the tracks shown here.</p>
+          </div>
+        )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        genreStatus === "success" &&
+        tagStorageStatus === "error" &&
+        tagStorageError && (
+          <div className="notice error">
+            <p>Automatic tags were prepared, but saving them in this browser failed.</p>
+            <p>{tagStorageError}</p>
           </div>
         )}
 

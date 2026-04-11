@@ -23,6 +23,9 @@ function AuthPage(props) {
           tracks={props.tracks}
           genreError={props.genreError}
           genreStatus={props.genreStatus}
+          tagStorageError={props.tagStorageError}
+          tagStorageStatus={props.tagStorageStatus}
+          tagStorageSummary={props.tagStorageSummary}
           tracksError={props.tracksError}
           tracksStatus={props.tracksStatus}
         />

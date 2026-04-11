@@ -103,3 +103,53 @@ export function mergeAutoTagsIntoTracks(
     };
   });
 }
+
+export function persistGeneratedAutoTags(
+  tracks,
+  artistGenresByArtistId,
+  trackTagsMap = getStoredTrackTagsMap()
+) {
+  const nextTrackTagsMap = { ...trackTagsMap };
+  let updatedTrackCount = 0;
+  let savedAutoTagCount = 0;
+  let createdEntryCount = 0;
+
+  tracks.forEach((track) => {
+    const tags = getTrackTags(track.id, nextTrackTagsMap);
+
+    if (tags.auto.length > 0) {
+      return;
+    }
+
+    const generatedAutoTags = buildAutoTagsFromArtistGenres(
+      track,
+      artistGenresByArtistId
+    );
+
+    if (generatedAutoTags.length === 0) {
+      return;
+    }
+
+    if (!nextTrackTagsMap[track.id]) {
+      createdEntryCount += 1;
+    }
+
+    nextTrackTagsMap[track.id] = {
+      auto: generatedAutoTags,
+      user: tags.user,
+    };
+    updatedTrackCount += 1;
+    savedAutoTagCount += generatedAutoTags.length;
+  });
+
+  if (updatedTrackCount > 0) {
+    saveTrackTagsMap(nextTrackTagsMap);
+  }
+
+  return {
+    trackTagsMap: nextTrackTagsMap,
+    updatedTrackCount,
+    savedAutoTagCount,
+    createdEntryCount,
+  };
+}
