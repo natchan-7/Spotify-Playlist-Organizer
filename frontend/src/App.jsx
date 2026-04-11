@@ -15,10 +15,12 @@ import {
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
 import {
+  addUserTagToTrack,
   getStoredTrackTagsMap,
   mergeAutoTagsIntoTracks,
   mergeTrackTagsIntoTracks,
   persistGeneratedAutoTags,
+  removeUserTagFromTrack,
 } from "./utils/trackTags";
 
 function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
@@ -434,6 +436,94 @@ function App() {
     setSelectedPlaylistId(playlistId);
   }
 
+  function handleAddUserTag(trackId, userTag) {
+    const currentTrack = tracks.find((track) => track.id === trackId);
+
+    if (!currentTrack) {
+      return { ok: false, reason: "missing" };
+    }
+
+    try {
+      const result = addUserTagToTrack(
+        trackId,
+        userTag,
+        currentTrack.autoTags,
+        getStoredTrackTagsMap()
+      );
+
+      if (!result.ok) {
+        return result;
+      }
+
+      setTracks((currentTracks) =>
+        currentTracks.map((track) =>
+          track.id === trackId
+            ? {
+                ...track,
+                autoTags: result.autoTags,
+                userTags: result.userTags,
+              }
+            : track
+        )
+      );
+
+      return result;
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "storage",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to save the user tag in browser storage.",
+      };
+    }
+  }
+
+  function handleRemoveUserTag(trackId, userTag) {
+    const currentTrack = tracks.find((track) => track.id === trackId);
+
+    if (!currentTrack) {
+      return { ok: false, reason: "missing" };
+    }
+
+    try {
+      const result = removeUserTagFromTrack(
+        trackId,
+        userTag,
+        currentTrack.autoTags,
+        getStoredTrackTagsMap()
+      );
+
+      if (!result.ok) {
+        return result;
+      }
+
+      setTracks((currentTracks) =>
+        currentTracks.map((track) =>
+          track.id === trackId
+            ? {
+                ...track,
+                autoTags: result.autoTags,
+                userTags: result.userTags,
+              }
+            : track
+        )
+      );
+
+      return result;
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "storage",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to update browser storage for this tag.",
+      };
+    }
+  }
+
   return (
     <AuthPage
       authStatus={authStatus}
@@ -457,6 +547,8 @@ function App() {
       tracks={tracks}
       tracksError={tracksError}
       tracksStatus={tracksStatus}
+      onAddUserTag={handleAddUserTag}
+      onRemoveUserTag={handleRemoveUserTag}
       onSelectPlaylist={handleSelectPlaylist}
     />
   );

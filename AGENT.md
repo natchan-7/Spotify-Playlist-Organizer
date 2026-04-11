@@ -28,6 +28,8 @@ Completed:
 - Step 3: Fetch and display tracks for the selected playlist
 - Step 4: Fetch artist genres and prepare auto tags
 - Step 5: Persist auto tags in `trackTags`
+- Step 6: Implement user tag input and storage
+- Step 7: Display auto tags and user tags together
 
 Already implemented in `frontend/`:
 
@@ -42,8 +44,10 @@ Already implemented in `frontend/`:
 - artist genre fetch in 50-ID batches
 - in-memory auto-tag preparation that preserves stored `trackTags.auto`
 - localStorage persistence for newly generated automatic tags only
+- per-track user tag add/remove with duplicate prevention
+- combined auto-tag and user-tag display in track rows
 
-The next implementation target is Step 6.
+The next implementation target is Step 8.
 
 ---
 
@@ -430,7 +434,7 @@ Required scope:
 
 Implement user tag input and storage.
 
-Status: next
+Status: complete
 
 Required scope:
 
@@ -442,6 +446,8 @@ Required scope:
 ### Step 7
 
 Display auto tags and user tags together.
+
+Status: complete
 
 Required scope:
 

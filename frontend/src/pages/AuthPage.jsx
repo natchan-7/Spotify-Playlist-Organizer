@@ -28,6 +28,8 @@ function AuthPage(props) {
           tagStorageSummary={props.tagStorageSummary}
           tracksError={props.tracksError}
           tracksStatus={props.tracksStatus}
+          onAddUserTag={props.onAddUserTag}
+          onRemoveUserTag={props.onRemoveUserTag}
         />
       </div>
     </main>
