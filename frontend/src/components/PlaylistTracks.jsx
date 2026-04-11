@@ -44,9 +44,15 @@ function PlaylistTracks({
   tracksError,
   tracksStatus,
 }) {
+  const taggedTrackCount = tracks.filter((track) => track.autoTags?.length > 0).length;
+  const totalAutoTagCount = tracks.reduce(
+    (count, track) => count + (track.autoTags?.length || 0),
+    0
+  );
+
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
-      return "Auto tags ready";
+      return `Auto tags ready (${taggedTrackCount} tagged)`;
     }
 
     if (genreStatus === "loading") {
@@ -114,6 +120,33 @@ function PlaylistTracks({
           </p>
         </div>
       )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        tracks.length > 0 &&
+        genreStatus === "success" &&
+        taggedTrackCount === 0 && (
+          <div className="notice">
+            <p>No automatic genre tags were added to this playlist.</p>
+            <p>
+              Spotify accepted the artist lookup, but it did not return usable
+              genre metadata for these artists.
+            </p>
+          </div>
+        )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        tracks.length > 0 &&
+        genreStatus === "success" &&
+        taggedTrackCount > 0 && (
+          <div className="notice">
+            <p>
+              Prepared {totalAutoTagCount} automatic genre tags across{" "}
+              {taggedTrackCount} tracks.
+            </p>
+          </div>
+        )}
 
       {selectedPlaylist &&
         tracksStatus === "success" &&
