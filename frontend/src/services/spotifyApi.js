@@ -143,6 +143,7 @@ export async function fetchCurrentUserProfile(accessToken) {
   return {
     id: payload.id || "",
     displayName: payload.display_name || payload.id || "Unknown",
+    country: payload.country || "",
   };
 }
 
@@ -192,7 +193,7 @@ function getPlaylistTracksUrl(playlist) {
   return `${SPOTIFY_API_URL}/playlists/${playlist.id}/tracks`;
 }
 
-export async function fetchPlaylistTracks(accessToken, playlist) {
+export async function fetchPlaylistTracks(accessToken, playlist, market) {
   const tracks = [];
   const baseUrl = getPlaylistTracksUrl(playlist);
 
@@ -205,6 +206,11 @@ export async function fetchPlaylistTracks(accessToken, playlist) {
   while (nextUrl) {
     const url = new URL(nextUrl);
     url.searchParams.set("limit", "100");
+    url.searchParams.set("additional_types", "track");
+
+    if (market) {
+      url.searchParams.set("market", market);
+    }
 
     const payload = await fetchSpotifyPage(
       url.toString(),

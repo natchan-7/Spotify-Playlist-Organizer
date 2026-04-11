@@ -32,6 +32,20 @@ function getSpotifyApiErrorMessage(error, fallbackMessage) {
   return error.message || fallbackMessage;
 }
 
+function getMarketFromBrowser() {
+  const locales = [navigator.language, ...(navigator.languages || [])].filter(Boolean);
+
+  for (const locale of locales) {
+    const parts = locale.split("-");
+
+    if (parts.length > 1 && /^[A-Z]{2}$/i.test(parts[1])) {
+      return parts[1].toUpperCase();
+    }
+  }
+
+  return "";
+}
+
 function App() {
   const [session, setSession] = useState(() => getSpotifySession());
   const [authStatus, setAuthStatus] = useState("idle");
@@ -40,6 +54,7 @@ function App() {
   const [playlistsStatus, setPlaylistsStatus] = useState("idle");
   const [playlistsError, setPlaylistsError] = useState("");
   const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserMarket, setCurrentUserMarket] = useState(() => getMarketFromBrowser());
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [tracks, setTracks] = useState([]);
   const [tracksStatus, setTracksStatus] = useState("idle");
@@ -93,6 +108,7 @@ function App() {
     setPlaylistsStatus("idle");
     setPlaylistsError("");
     setCurrentUserId("");
+    setCurrentUserMarket(getMarketFromBrowser());
     setSelectedPlaylistId(null);
     setTracks([]);
     setTracksStatus("idle");
@@ -119,6 +135,7 @@ function App() {
       setPlaylistsStatus("idle");
       setPlaylistsError("");
       setCurrentUserId("");
+      setCurrentUserMarket(getMarketFromBrowser());
       setSelectedPlaylistId(null);
       setTracks([]);
       setTracksStatus("idle");
@@ -133,14 +150,25 @@ function App() {
       setPlaylistsError("");
 
       try {
-        const [profile, nextPlaylists] = await Promise.all([
+        const [profileResult, playlistsResult] = await Promise.allSettled([
           fetchCurrentUserProfile(session.accessToken),
           fetchCurrentUserPlaylists(session.accessToken),
         ]);
 
+        if (playlistsResult.status !== "fulfilled") {
+          throw playlistsResult.reason;
+        }
+
         if (!ignore) {
-          setCurrentUserId(profile.id);
-          setPlaylists(nextPlaylists);
+          if (profileResult.status === "fulfilled") {
+            setCurrentUserId(profileResult.value.id);
+            setCurrentUserMarket(profileResult.value.country || getMarketFromBrowser());
+          } else {
+            setCurrentUserId("");
+            setCurrentUserMarket(getMarketFromBrowser());
+          }
+
+          setPlaylists(playlistsResult.value);
           setPlaylistsStatus("success");
         }
       } catch (error) {
@@ -153,6 +181,7 @@ function App() {
           setPlaylistsError(message);
           setPlaylistsStatus("error");
           setCurrentUserId("");
+          setCurrentUserMarket(getMarketFromBrowser());
         }
       }
     }
@@ -195,7 +224,8 @@ function App() {
       try {
         const nextTracks = await fetchPlaylistTracks(
           session.accessToken,
-          selectedPlaylist
+          selectedPlaylist,
+          currentUserMarket
         );
 
         if (!ignore) {
@@ -220,7 +250,7 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [session, selectedPlaylist]);
+  }, [session, selectedPlaylist, currentUserMarket]);
 
   function handleSelectPlaylist(playlistId) {
     setSelectedPlaylistId(playlistId);
