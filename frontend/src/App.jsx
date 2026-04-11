@@ -33,9 +33,22 @@ function getSpotifyApiErrorMessage(error, fallbackMessage) {
 }
 
 function getMarketFromBrowser() {
-  const locales = [navigator.language, ...(navigator.languages || [])].filter(Boolean);
+  const runtimeLocale = Intl.DateTimeFormat().resolvedOptions().locale;
+  const locales = [runtimeLocale, navigator.language, ...(navigator.languages || [])].filter(Boolean);
 
   for (const locale of locales) {
+    if (typeof Intl.Locale === "function") {
+      try {
+        const expandedLocale = new Intl.Locale(locale).maximize();
+
+        if (expandedLocale.region && /^[A-Z]{2}$/i.test(expandedLocale.region)) {
+          return expandedLocale.region.toUpperCase();
+        }
+      } catch (error) {
+        // Ignore locale parsing issues and continue with the simpler fallback.
+      }
+    }
+
     const parts = locale.split("-");
 
     if (parts.length > 1 && /^[A-Z]{2}$/i.test(parts[1])) {
