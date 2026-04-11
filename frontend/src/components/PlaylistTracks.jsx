@@ -24,6 +24,18 @@ function getTrackArtworkFallback(trackName) {
   return trackName ? trackName.slice(0, 1).toUpperCase() : "T";
 }
 
+function formatTagLabel(tag) {
+  if (!tag) {
+    return "";
+  }
+
+  return tag
+    .split(/[\s-]+/)
+    .filter(Boolean)
+    .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function PlaylistTracks({
   genreError,
   genreStatus,
@@ -149,6 +161,15 @@ function PlaylistTracks({
                 </div>
                 <p className="track-meta">{formatArtists(track.artists)}</p>
                 <p className="track-meta">{track.album}</p>
+                {track.autoTags?.length > 0 && (
+                  <div className="track-tag-row">
+                    {track.autoTags.map((tag) => (
+                      <span key={`${track.id}-${tag}`} className="auto-tag">
+                        {formatTagLabel(tag)}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </article>
           ))}
