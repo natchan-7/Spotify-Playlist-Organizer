@@ -11,6 +11,24 @@ import {
     hasAuthCallbackParams,
 } from "./services/spotifyAuth";
 
+  function getSpotifyApiErrorMessage(error, fallbackMessage) {
+    if (!(error instanceof Error)) {
+      return fallbackMessage;
+    }
+
+    const status = error.status;
+
+    if (status === 401) {
+      return "Spotify session expired. Please log in again.";
+    }
+
+    if (status === 403) {
+      return "Spotify returned Forbidden. Log out and log in again, then confirm your Spotify app user access.";
+    }
+
+    return error.message || fallbackMessage;
+  }
+
 function App() {
   const [session, setSession] = useState(() => getSpotifySession());
   const [authStatus, setAuthStatus] = useState("idle");
@@ -27,6 +45,7 @@ function App() {
     () => playlists.find((playlist) => playlist.id === selectedPlaylistId) || null,
     [playlists, selectedPlaylistId]
   );
+
 
   useEffect(() => {
     if (!hasAuthCallbackParams()) {
@@ -118,10 +137,10 @@ function App() {
         }
       } catch (error) {
         if (!ignore) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to fetch Spotify playlists.";
+          const message = getSpotifyApiErrorMessage(
+            error,
+            "Failed to fetch Spotify playlists."
+          );
           setPlaylists([]);
           setPlaylistsError(message);
           setPlaylistsStatus("error");
@@ -162,10 +181,10 @@ function App() {
         }
       } catch (error) {
         if (!ignore) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : "Failed to fetch Spotify playlist tracks.";
+          const message = getSpotifyApiErrorMessage(
+            error,
+            "Failed to fetch Spotify playlist tracks."
+          );
           setTracks([]);
           setTracksError(message);
           setTracksStatus("error");

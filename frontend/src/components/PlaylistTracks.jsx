@@ -56,7 +56,10 @@ function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus })
 
       {selectedPlaylist && tracksStatus === "success" && tracks.length === 0 && (
         <div className="notice">
-          <p>No tracks were returned for this playlist.</p>
+          <p>
+            No tracks were returned for this playlist. Local-only tracks are
+            ignored.
+          </p>
         </div>
       )}
 

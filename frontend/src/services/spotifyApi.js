@@ -72,7 +72,9 @@ async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
   if (!response.ok) {
     const message =
       payload?.error?.message || fallbackMessage || "Failed to fetch Spotify playlists.";
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return payload;
