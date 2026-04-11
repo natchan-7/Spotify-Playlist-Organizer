@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cf:deploy": "wrangler deploy",
+    "cf:versions": "wrangler versions upload"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -14,6 +16,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.8"
+    "vite": "^5.4.8",
+    "wrangler": "^4.81.1"
   }
 }

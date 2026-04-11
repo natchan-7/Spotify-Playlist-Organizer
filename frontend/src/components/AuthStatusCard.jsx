@@ -18,6 +18,7 @@ function AuthStatusCard({
   onLogin,
   playlistsCount,
   playlistsStatus,
+  redirectUri,
   session,
   onLogout,
 }) {
@@ -45,6 +46,9 @@ function AuthStatusCard({
       <h1>Spotify Playlist Organizer</h1>
       <p className="lead">
         Start with Spotify login so the next step can fetch and display playlists.
+      </p>
+      <p className="helper redirect-helper">
+        Redirect URI: <code>{redirectUri}</code>
       </p>
 
       {!hasConfig && (
@@ -89,6 +93,10 @@ function AuthStatusCard({
           </div>
           <p className="helper">
             The next step will use this access token to fetch playlists.
+          </p>
+          <p className="helper">
+            Keep this redirect URI registered in your Spotify app settings for both
+            local and Cloudflare Pages access.
           </p>
         </div>
       ) : (

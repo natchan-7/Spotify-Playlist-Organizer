@@ -6,6 +6,7 @@ import {
   beginSpotifyLogin,
   clearSpotifySession,
   exchangeCodeForToken,
+  getSpotifyRedirectUri,
   getSpotifySession,
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
@@ -129,6 +130,7 @@ function App() {
       playlistsCount={playlists.length}
       playlistsError={playlistsError}
       playlistsStatus={playlistsStatus}
+      redirectUri={getSpotifyRedirectUri()}
       session={session}
     />
   );

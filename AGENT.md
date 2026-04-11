@@ -1,55 +1,223 @@
-# 🤖 AGENTS.md - Spotify Playlist Organizer (Cloudflare Pages)
+# AGENT.md - Spotify Playlist Organizer
 
-## 🎯 Goal
+## Goal
 
-Build a frontend-only web application deployed on Cloudflare Pages that:
+Build a frontend-only Spotify playlist organizer deployed on Cloudflare Pages.
 
-* Fetches Spotify playlists
-* Displays tracks with metadata
-* Applies auto + manual tags
-* Stores tags in localStorage
-* Generates new playlists via Spotify API
+The app must:
 
----
+- authenticate the user with Spotify
+- fetch the user's playlists
+- fetch tracks for a selected playlist
+- generate auto tags from artist genres
+- allow manual user tags
+- persist tags in localStorage
+- create a new Spotify playlist from filtered tracks
 
-## 🧱 Tech Stack
-
-* Frontend: React (JavaScript)
-* Build Tool: Vite
-* Hosting: Cloudflare Pages
-* API: Spotify Web API
-* Storage: localStorage
-* Auth: OAuth 2.0 (Client-side)
+This file is the canonical implementation guide for all future steps.
+When code and older notes disagree, follow this file and the current codebase.
 
 ---
 
-## 📁 Project Structure
+## Current Baseline
 
-```id="c9l3xg"
+Completed:
+
+- Step 1: Spotify OAuth login
+- Step 2: Fetch and display playlists
+
+Already implemented in `frontend/`:
+
+- React 18 + Vite app
+- Spotify Authorization Code with PKCE
+- access token exchange on callback
+- Spotify session persistence in localStorage
+- playlist fetch with pagination
+- normalized playlist cards with artwork, owner, visibility, track count, and Spotify link
+
+The next implementation target is Step 3.
+
+---
+
+## Locked Technical Decisions
+
+### Stack
+
+- Frontend: React with JavaScript, not TypeScript
+- Build tool: Vite
+- Hosting: Cloudflare Pages
+- API: Spotify Web API
+- Persistence: browser storage only
+- Routing: single-page flow in the existing app state unless a later step explicitly requires otherwise
+
+### Hard Constraints
+
+- No backend
+- No database
+- No server-side rendering
+- No Cloudflare Functions for app logic
+- No refresh token flow
+- No storage of Spotify data in any place other than browser memory/localStorage/sessionStorage
+- Do not add libraries unless the existing code clearly cannot support the next step without them
+
+### Architecture Principles
+
+- Keep the app frontend-only and static-build compatible
+- Extend the existing structure instead of redesigning it
+- Preserve already working Step 1 and Step 2 behavior while adding later steps
+- Prefer small reusable functions and small presentational components
+- Separate API access, storage logic, and UI rendering
+
+---
+
+## Project Structure
+
+```text
 frontend/
   src/
-    components/
-    pages/
-    services/
-    utils/
-    styles/
+    components/   # reusable UI pieces
+    pages/        # page-level composition
+    services/     # Spotify API and auth logic
+    utils/        # storage, PKCE, data helpers
+    styles/       # global CSS
 ```
 
-### Rules
+Rules:
 
-* UI → `components/`
-* Page-level components → `pages/`
-* API calls → `services/`
-* Logic & storage → `utils/`
-* CSS → `styles/`
+- UI-only logic belongs in `components/`
+- screen composition belongs in `pages/`
+- Spotify auth and API calls belong in `services/`
+- browser storage and pure helper logic belong in `utils/`
+- styling stays in `styles/`
+- keep `App.jsx` as the top-level state coordinator unless there is a strong reason to split it
 
 ---
 
-## 📊 Data Structure
+## Environment Configuration
 
-### localStorage key: `trackTags`
+Required:
 
-```json id="xv4f3t"
+- `VITE_SPOTIFY_CLIENT_ID`
+
+Optional:
+
+- `VITE_SPOTIFY_REDIRECT_URI`
+
+Behavior:
+
+- if `VITE_SPOTIFY_REDIRECT_URI` is missing, use `window.location.origin + window.location.pathname`
+- the redirect URI must be registered in the Spotify app settings
+- missing `VITE_SPOTIFY_CLIENT_ID` is a user-facing configuration error, not a silent failure
+
+---
+
+## Authentication Design
+
+Use Spotify Authorization Code with PKCE only.
+
+Do not use:
+
+- Implicit Grant
+- backend token exchange
+- refresh tokens
+
+### Spotify Scopes
+
+Keep these scopes unless a future step truly requires more:
+
+- `playlist-read-private`
+- `playlist-read-collaborative`
+- `playlist-modify-private`
+- `playlist-modify-public`
+
+### Storage Rules
+
+Session storage:
+
+- `spotify_pkce_code_verifier`
+- `spotify_pkce_state`
+
+Local storage:
+
+- `spotifySession`
+
+### Spotify Session Shape
+
+```js
+{
+  accessToken: string,
+  tokenType: string,
+  scope: string,
+  expiresAt: number
+}
+```
+
+Rules:
+
+- clear expired sessions before using them
+- clear PKCE verifier and state after callback handling
+- remove auth query params after processing the callback
+- the callback flow must be safe under React StrictMode remount behavior
+- if auth state validation fails, treat it as a hard error and clear temporary auth data
+
+---
+
+## Async State Pattern
+
+Continue the existing UI state convention for every async area:
+
+- `idle`
+- `loading`
+- `success`
+- `error`
+
+Each domain should own its own state and error message.
+
+Examples for future steps:
+
+- `tracksStatus`
+- `tracksError`
+- `genreStatus`
+- `playlistCreationStatus`
+
+Do not collapse unrelated async operations into one shared loading flag.
+
+---
+
+## Current Data Contracts
+
+### Normalized Playlist Object
+
+This is already established by the Step 2 implementation.
+
+```js
+{
+  id: string,
+  name: string,
+  description: string,
+  imageUrl: string,
+  ownerName: string,
+  totalTracks: number,
+  tracksHref: string,
+  isPublic: boolean,
+  isCollaborative: boolean,
+  spotifyUrl: string
+}
+```
+
+Rules:
+
+- keep this shape stable
+- playlist cards and later track fetch flows should use this normalized object
+- if playlist track totals are missing or zero, a lightweight fallback request may be used to recover the total
+
+### Track Tag Storage
+
+This storage contract is locked for later steps:
+
+localStorage key: `trackTags`
+
+```json
 {
   "track_id": {
     "auto": ["genre"],
@@ -58,221 +226,234 @@ frontend/
 }
 ```
 
----
+Rules:
 
-### Track Object
+- `auto` and `user` must always be arrays
+- do not store full track payloads inside `trackTags`
+- do not change this key name
+- do not change this nested shape
 
-```js id="nqf8dp"
+### Normalized Track Object
+
+For Step 3 and Step 4, use a normalized track object that preserves artist IDs.
+Do not flatten away the artist identifiers, because Step 4 needs them for genre lookup.
+
+```js
 {
   id: string,
+  uri: string,
   name: string,
-  artist: string,
   album: string,
-  duration_ms: number,
-  thumbnail_url: string,
+  durationMs: number,
+  thumbnailUrl: string,
+  artists: [
+    {
+      id: string,
+      name: string
+    }
+  ],
   autoTags: string[],
   userTags: string[]
 }
 ```
 
----
+Rules:
 
-## 🔐 Authentication
-
-* Use Spotify OAuth (Implicit Grant or PKCE)
-* Access token stored in memory or localStorage
-* DO NOT use backend
-
----
-
-## 🔌 API Usage
-
-Use Spotify Web API directly from frontend:
-
-* GET /me/playlists
-* GET /playlists/{id}/tracks
-* GET /artists/{id}
-* POST /users/{user_id}/playlists
-* POST /playlists/{id}/tracks
+- `artists` must keep Spotify artist IDs
+- `autoTags` and `userTags` are UI-ready values derived from `trackTags`
+- do not persist normalized tracks in localStorage
+- track fetch results should remain sourced from Spotify, not from a local cache
 
 ---
 
-## 🧠 Core Logic
+## Spotify API Rules
 
-### 1. Fetch Flow
+Use Spotify Web API directly from the frontend.
 
-1. Fetch playlists
-2. Fetch tracks
-3. Extract artist IDs
-4. Fetch genres from artist API
-5. Assign genres as autoTags
+Current and planned endpoints:
+
+- `GET /me/playlists`
+- `GET /playlists/{id}/tracks`
+- `GET /artists/{id}`
+- `POST /users/{user_id}/playlists`
+- `POST /playlists/{id}/tracks`
+
+Rules:
+
+- always send the bearer token from `spotifySession.accessToken`
+- normalize Spotify responses before rendering
+- preserve pagination support for playlist and track endpoints
+- fail with clear user-facing errors when Spotify returns an error payload
+
+### Playlist Fetch Rules
+
+- fetch all user playlists with pagination
+- use `limit=50` for `/me/playlists`
+- normalize each playlist before it reaches UI components
+
+### Track Fetch Rules
+
+To avoid future rework, Step 3 must fetch tracks for one selected playlist at a time.
+
+Do:
+
+- keep the playlist list visible
+- add an explicit selected-playlist state
+- fetch tracks only after a playlist is selected
+- support Spotify pagination for playlist tracks
+- ignore local tracks for which `track` is null
+
+Do not:
+
+- eagerly fetch tracks for every playlist during Step 3
+- couple playlist list rendering to track fetch logic
+
+### Genre Fetch Rules
+
+For Step 4 and Step 5:
+
+- derive artist IDs from the normalized track objects
+- fetch artist genres from Spotify
+- generate auto tags only when `trackTags[trackId].auto` is missing or empty
+- never overwrite existing auto tags that are already stored
 
 ---
 
-### 2. Auto Tag Logic
+## UI Rules
 
-* Generate ONLY if not in localStorage
-* Save to localStorage
-* DO NOT overwrite existing auto tags
+### Existing Screen Direction
 
----
+- keep the current single-page layout
+- keep the current visual language unless a change is required for the new feature
+- mobile behavior must remain usable
 
-### 3. User Tag Logic
+### Playlist Area
 
-#### Add
-
-* Prevent duplicates
-* Save immediately
-
-#### Remove
-
-* Remove tag from array
-* Save immediately
-
----
-
-### 4. Tag Retrieval
-
-```js id="qz1w0y"
-function getTags(track_id) {
-  const data = JSON.parse(localStorage.getItem("trackTags") || "{}");
-  return data[track_id] || { auto: [], user: [] };
-}
-```
-
----
-
-## 🎨 UI Rules
+- keep playlist cards as the summary view
+- use playlist selection as the entry point for Step 3
+- do not remove existing artwork, owner, visibility, or Spotify-link information
 
 ### Tag Display
 
-* Auto Tag:
+Auto tag:
 
-  * class: `auto-tag`
-  * color: gray
-  * NOT editable
+- class: `auto-tag`
+- visually distinct from user tags
+- not directly editable
 
-* User Tag:
+User tag:
 
-  * class: `user-tag`
-  * color: blue or green
-  * removable
+- class: `user-tag`
+- removable
+- prevent duplicate user tags per track
 
----
+### Error UX
 
-## 📂 Playlist Generation
-
-### Input
-
-* Selected user tag
-
-### Process
-
-1. Filter tracks by userTags
-2. Create playlist via API
-3. Add tracks
+- show configuration errors clearly
+- show Spotify request errors clearly
+- do not fail silently
 
 ---
 
-## ⚠️ Constraints (IMPORTANT)
+## Implementation Order
 
-* NO backend allowed
-* NO database allowed
-* Store everything in localStorage
-* Keep architecture simple
-* Do NOT implement future features
-
----
-
-## 🔄 Future Features (Do NOT implement)
-
-* Playlist sync
-* Refresh feature
-* Lyrics integration
-* Backend migration
-
----
-
-## ⚙️ Implementation Steps (STRICT ORDER)
+Keep the strict order, but follow the clarified scope below.
 
 ### Step 1
 
-Implement Spotify OAuth login (PKCE recommended)
+Implement Spotify OAuth login with PKCE.
+
+Status: complete
 
 ### Step 2
 
-Fetch and display playlists
+Fetch and display the current user's playlists.
+
+Status: complete
 
 ### Step 3
 
-Fetch and display tracks
+Fetch and display tracks for the selected playlist.
+
+Required scope:
+
+- add selected playlist state
+- fetch playlist tracks on demand
+- normalize track data
+- show track loading, empty, and error states
 
 ### Step 4
 
-Fetch genres and generate auto tags
+Fetch artist genres and prepare auto tags.
+
+Required scope:
+
+- use artist IDs from normalized tracks
+- map genres into `auto` tags
 
 ### Step 5
 
-Store auto tags in localStorage
+Persist auto tags in `trackTags`.
+
+Required scope:
+
+- create missing entries
+- never overwrite existing `auto` arrays
 
 ### Step 6
 
-Implement user tag input + storage
+Implement user tag input and storage.
+
+Required scope:
+
+- add tags
+- remove tags
+- prevent duplicates
+- save immediately
 
 ### Step 7
 
-Display tags (auto + user)
+Display auto tags and user tags together.
+
+Required scope:
+
+- merge Spotify-fetched track data with stored tag data at render time
 
 ### Step 8
 
-Implement playlist creation
+Create a new playlist from tracks filtered by a selected user tag.
+
+Required scope:
+
+- filter by `userTags`
+- create playlist with Spotify API
+- add matching track URIs to the new playlist
 
 ---
 
-## 🧪 Agent Rules
+## Non-Goals
 
-### ALWAYS
+Do not implement these now:
 
-* Follow folder structure
-* Keep components small
-* Separate UI and logic
-* Use reusable functions
-
----
-
-### NEVER
-
-* Add backend
-* Use database
-* Overcomplicate architecture
-* Change data structure
+- backend or worker-based data proxy
+- database persistence
+- playlist sync across accounts
+- background refresh jobs
+- lyrics
+- recommendation engine
+- large-scale architecture refactors
 
 ---
 
-## 📝 Output Requirements
+## Definition of Done
 
-When generating code:
+The project is done when:
 
-* Specify file path
-* Provide full code
-* Keep naming consistent
-* Avoid unnecessary abstraction
-
----
-
-## 📌 Cloudflare Pages Notes
-
-* This project must build with Vite
-* Output must be static (dist folder)
-* No server-side rendering
-
----
-
-## ✅ Definition of Done
-
-* Login works
-* Playlists are displayed
-* Tracks are displayed
-* Tags can be added
-* Tags persist in localStorage
-* Playlist can be created
+- login works with Spotify PKCE
+- playlists are displayed
+- tracks for a selected playlist are displayed
+- auto tags are generated from artist genres
+- user tags can be added and removed
+- tags persist in localStorage
+- a new playlist can be created from filtered tracks
+- the app still builds as a static Vite frontend for Cloudflare Pages

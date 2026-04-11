@@ -27,11 +27,26 @@ function getClientId() {
   return import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 }
 
-function getRedirectUri() {
-  return (
-    import.meta.env.VITE_SPOTIFY_REDIRECT_URI ||
-    window.location.origin + window.location.pathname
-  );
+function normalizeRedirectUri(value) {
+  const url = new URL(value, window.location.origin);
+  url.search = "";
+  url.hash = "";
+
+  if (!url.pathname) {
+    url.pathname = "/";
+  }
+
+  return url.toString();
+}
+
+export function getSpotifyRedirectUri() {
+  const configuredRedirectUri = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
+
+  if (configuredRedirectUri) {
+    return normalizeRedirectUri(configuredRedirectUri);
+  }
+
+  return normalizeRedirectUri(window.location.origin + window.location.pathname);
 }
 
 function ensureAuthConfig() {
@@ -43,7 +58,7 @@ function ensureAuthConfig() {
 
   return {
     clientId,
-    redirectUri: getRedirectUri(),
+    redirectUri: getSpotifyRedirectUri(),
   };
 }
 
