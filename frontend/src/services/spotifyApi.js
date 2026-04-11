@@ -153,17 +153,24 @@ function normalizeTrackItem(item) {
     return null;
   }
 
-  if (!track.id) {
+  if (track.type && track.type !== "track") {
     return null;
   }
 
+  const normalizedId =
+    track.id ||
+    track.uri ||
+    [track.name, item?.added_at, track.artists?.map((artist) => artist.name).join("-")]
+      .filter(Boolean)
+      .join("-");
+
   return {
-    id: track.id,
-    uri: track.uri,
+    id: normalizedId,
+    uri: track.uri || "",
     name: track.name,
     album: track.album?.name || "",
     durationMs: Number(track.duration_ms) || 0,
-    thumbnailUrl: track.album?.images?.[track.album.images.length - 1]?.url || "",
+    thumbnailUrl: track.album?.images?.[0]?.url || "",
     artists: (track.artists || []).map((artist) => ({
       id: artist.id,
       name: artist.name,
