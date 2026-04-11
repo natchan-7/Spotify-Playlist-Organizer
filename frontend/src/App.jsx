@@ -1,33 +1,36 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import AuthPage from "./pages/AuthPage";
-import { fetchCurrentUserPlaylists, fetchPlaylistTracks } from "./services/spotifyApi";
 import {
-    beginSpotifyLogin,
-    clearSpotifySession,
-    exchangeCodeForToken,
-    getSpotifyRedirectUri,
-    getSpotifySession,
-    hasAuthCallbackParams,
+  fetchCurrentUserPlaylists,
+  fetchCurrentUserProfile,
+  fetchPlaylistTracks,
+} from "./services/spotifyApi";
+import {
+  beginSpotifyLogin,
+  clearSpotifySession,
+  exchangeCodeForToken,
+  getSpotifyRedirectUri,
+  getSpotifySession,
+  hasAuthCallbackParams,
 } from "./services/spotifyAuth";
 
-  function getSpotifyApiErrorMessage(error, fallbackMessage) {
-    if (!(error instanceof Error)) {
-      return fallbackMessage;
-    }
-
-    const status = error.status;
-
-    if (status === 401) {
-      return "Spotify session expired. Please log in again.";
-    }
-
-    if (status === 403) {
-      return "Spotify returned Forbidden. Log out and log in again, then confirm your Spotify app user access.";
-    }
-
-    return error.message || fallbackMessage;
+function getSpotifyApiErrorMessage(error, fallbackMessage) {
+  if (!(error instanceof Error)) {
+    return fallbackMessage;
   }
+
+  const status = error.status;
+
+  if (status === 401) {
+    return "Spotify session expired. Please log in again.";
+  }
+
+  if (status === 403) {
+    return "Spotify returned Forbidden. Spotify only returns playlist items for playlists you own or collaborate on.";
+  }
+
+  return error.message || fallbackMessage;
+}
 
 function App() {
   const [session, setSession] = useState(() => getSpotifySession());
@@ -36,16 +39,15 @@ function App() {
   const [playlists, setPlaylists] = useState([]);
   const [playlistsStatus, setPlaylistsStatus] = useState("idle");
   const [playlistsError, setPlaylistsError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
   const [selectedPlaylistId, setSelectedPlaylistId] = useState(null);
   const [tracks, setTracks] = useState([]);
   const [tracksStatus, setTracksStatus] = useState("idle");
   const [tracksError, setTracksError] = useState("");
+  const redirectUri = getSpotifyRedirectUri();
 
-  const selectedPlaylist = useMemo(
-    () => playlists.find((playlist) => playlist.id === selectedPlaylistId) || null,
-    [playlists, selectedPlaylistId]
-  );
-
+  const selectedPlaylist =
+    playlists.find((playlist) => playlist.id === selectedPlaylistId) || null;
 
   useEffect(() => {
     if (!hasAuthCallbackParams()) {
@@ -90,6 +92,7 @@ function App() {
     setPlaylists([]);
     setPlaylistsStatus("idle");
     setPlaylistsError("");
+    setCurrentUserId("");
     setSelectedPlaylistId(null);
     setTracks([]);
     setTracksStatus("idle");
@@ -115,6 +118,7 @@ function App() {
       setPlaylists([]);
       setPlaylistsStatus("idle");
       setPlaylistsError("");
+      setCurrentUserId("");
       setSelectedPlaylistId(null);
       setTracks([]);
       setTracksStatus("idle");
@@ -129,9 +133,13 @@ function App() {
       setPlaylistsError("");
 
       try {
-        const nextPlaylists = await fetchCurrentUserPlaylists(session.accessToken);
+        const [profile, nextPlaylists] = await Promise.all([
+          fetchCurrentUserProfile(session.accessToken),
+          fetchCurrentUserPlaylists(session.accessToken),
+        ]);
 
         if (!ignore) {
+          setCurrentUserId(profile.id);
           setPlaylists(nextPlaylists);
           setPlaylistsStatus("success");
         }
@@ -144,6 +152,7 @@ function App() {
           setPlaylists([]);
           setPlaylistsError(message);
           setPlaylistsStatus("error");
+          setCurrentUserId("");
         }
       }
     }
@@ -154,6 +163,20 @@ function App() {
       ignore = true;
     };
   }, [session]);
+
+  useEffect(() => {
+    if (!selectedPlaylistId) {
+      return;
+    }
+
+    const hasSelectedPlaylist = playlists.some(
+      (playlist) => playlist.id === selectedPlaylistId
+    );
+
+    if (!hasSelectedPlaylist) {
+      setSelectedPlaylistId(null);
+    }
+  }, [playlists, selectedPlaylistId]);
 
   useEffect(() => {
     if (!session?.accessToken || !selectedPlaylist) {
@@ -214,7 +237,8 @@ function App() {
       playlistsCount={playlists.length}
       playlistsError={playlistsError}
       playlistsStatus={playlistsStatus}
-      redirectUri={getSpotifyRedirectUri()}
+      currentUserId={currentUserId}
+      redirectUri={redirectUri}
       session={session}
       selectedPlaylist={selectedPlaylist}
       tracks={tracks}

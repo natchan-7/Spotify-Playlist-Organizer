@@ -20,6 +20,10 @@ function formatArtists(artists) {
   return artists.map((artist) => artist.name).join(", ");
 }
 
+function getTrackArtworkFallback(trackName) {
+  return trackName ? trackName.slice(0, 1).toUpperCase() : "T";
+}
+
 function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus }) {
   return (
     <section className="panel">
@@ -28,7 +32,12 @@ function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus })
           <p className="eyebrow">Step 3 / Tracks</p>
           <h2>Playlist tracks</h2>
           {selectedPlaylist && (
-            <p className="panel-subtitle">{selectedPlaylist.name}</p>
+            <>
+              <p className="panel-subtitle">{selectedPlaylist.name}</p>
+              <p className="panel-subtitle panel-subtitle-muted">
+                {selectedPlaylist.totalTracks} tracks by {selectedPlaylist.ownerName}
+              </p>
+            </>
           )}
         </div>
         {tracksStatus === "success" && selectedPlaylist && (
@@ -57,8 +66,9 @@ function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus })
       {selectedPlaylist && tracksStatus === "success" && tracks.length === 0 && (
         <div className="notice">
           <p>
-            No tracks were returned for this playlist. Local-only tracks are
-            ignored.
+            No supported Spotify track items were returned for this playlist.
+            This usually means the playlist is empty, or it only contains local
+            or unavailable items.
           </p>
         </div>
       )}
@@ -75,7 +85,9 @@ function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus })
                     loading="lazy"
                   />
                 ) : (
-                  <div className="track-artwork-fallback">M</div>
+                  <div className="track-artwork-fallback">
+                    {getTrackArtworkFallback(track.name)}
+                  </div>
                 )}
               </div>
               <div className="track-body">

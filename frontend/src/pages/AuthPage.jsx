@@ -14,6 +14,7 @@ function AuthPage(props) {
           playlists={props.playlists}
           playlistsError={props.playlistsError}
           playlistsStatus={props.playlistsStatus}
+          currentUserId={props.currentUserId}
           onSelectPlaylist={props.onSelectPlaylist}
           selectedPlaylistId={props.selectedPlaylist?.id || null}
         />

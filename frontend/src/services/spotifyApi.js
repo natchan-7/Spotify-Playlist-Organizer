@@ -52,6 +52,7 @@ function normalizePlaylist(playlist) {
     name: playlist.name,
     description: playlist.description || "",
     imageUrl: playlist.images?.[0]?.url || "",
+    ownerId: playlist.owner?.id || "",
     ownerName: playlist.owner?.display_name || playlist.owner?.id || "Unknown",
     totalTracks: Number.isFinite(normalizedTotalTracks)
       ? normalizedTotalTracks
@@ -130,6 +131,19 @@ export async function fetchCurrentUserPlaylists(accessToken) {
       };
     })
   );
+}
+
+export async function fetchCurrentUserProfile(accessToken) {
+  const payload = await fetchSpotifyPage(
+    `${SPOTIFY_API_URL}/me`,
+    accessToken,
+    "Failed to fetch the current Spotify user profile."
+  );
+
+  return {
+    id: payload.id || "",
+    displayName: payload.display_name || payload.id || "Unknown",
+  };
 }
 
 function normalizeTrackItem(item) {

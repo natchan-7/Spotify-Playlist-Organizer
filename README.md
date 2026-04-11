@@ -2,13 +2,14 @@
 
 This project is being implemented step by step following the strict order in `AGENT.md`.
 
-Current status: Step 2 is implemented.
+Current status: Step 3 is implemented.
 
 - Created a React + Vite app in `frontend/`
 - Implemented Spotify OAuth login with PKCE
 - Exchange the callback code for an access token and save it in localStorage
 - Fetch Spotify playlists after authentication
 - Display playlist artwork, owner, track count, visibility, and Spotify links
+- Fetch tracks for a selected playlist and display track metadata
 
 Setup:
 
@@ -26,7 +27,7 @@ Notes:
 - if it is not set, the app uses the current site URL automatically
 - for Cloudflare Pages, leaving it unset is the simplest option
 
-Next target: Step 3, "Fetch and display tracks".
+Next target: Step 4, "Fetch artist genres and prepare auto tags".
 
 ## Cloudflare
 
