@@ -21,7 +21,6 @@ function AuthPage(props) {
         <PlaylistTracks
           selectedPlaylist={props.selectedPlaylist}
           tracks={props.tracks}
-          trackDiagnostics={props.trackDiagnostics}
           tracksError={props.tracksError}
           tracksStatus={props.tracksStatus}
         />

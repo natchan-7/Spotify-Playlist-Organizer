@@ -13,6 +13,7 @@ import {
   getSpotifySession,
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
+import { mergeTrackTagsIntoTracks } from "./utils/trackTags";
 
 function getSpotifyApiErrorMessage(error, fallbackMessage) {
   if (!(error instanceof Error)) {
@@ -72,7 +73,6 @@ function App() {
   const [tracks, setTracks] = useState([]);
   const [tracksStatus, setTracksStatus] = useState("idle");
   const [tracksError, setTracksError] = useState("");
-  const [trackDiagnostics, setTrackDiagnostics] = useState(null);
   const redirectUri = getSpotifyRedirectUri();
 
   const selectedPlaylist =
@@ -127,7 +127,6 @@ function App() {
     setTracks([]);
     setTracksStatus("idle");
     setTracksError("");
-    setTrackDiagnostics(null);
   }
 
   async function handleLogin() {
@@ -155,7 +154,6 @@ function App() {
       setTracks([]);
       setTracksStatus("idle");
       setTracksError("");
-      setTrackDiagnostics(null);
       return;
     }
 
@@ -228,7 +226,6 @@ function App() {
       setTracks([]);
       setTracksStatus("idle");
       setTracksError("");
-      setTrackDiagnostics(null);
       return;
     }
 
@@ -237,18 +234,16 @@ function App() {
     async function loadTracks() {
       setTracksStatus("loading");
       setTracksError("");
-      setTrackDiagnostics(null);
 
       try {
-        const { tracks: nextTracks, diagnostics } = await fetchPlaylistTracks(
+        const nextTracks = await fetchPlaylistTracks(
           session.accessToken,
           selectedPlaylist,
           currentUserMarket
         );
 
         if (!ignore) {
-          setTracks(nextTracks);
-          setTrackDiagnostics(diagnostics);
+          setTracks(mergeTrackTagsIntoTracks(nextTracks));
           setTracksStatus("success");
         }
       } catch (error) {
@@ -259,7 +254,6 @@ function App() {
           );
           setTracks([]);
           setTracksError(message);
-          setTrackDiagnostics(null);
           setTracksStatus("error");
         }
       }
@@ -292,7 +286,6 @@ function App() {
       session={session}
       selectedPlaylist={selectedPlaylist}
       tracks={tracks}
-      trackDiagnostics={trackDiagnostics}
       tracksError={tracksError}
       tracksStatus={tracksStatus}
       onSelectPlaylist={handleSelectPlaylist}

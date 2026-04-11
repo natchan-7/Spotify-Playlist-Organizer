@@ -27,7 +27,6 @@ function getTrackArtworkFallback(trackName) {
 function PlaylistTracks({
   selectedPlaylist,
   tracks,
-  trackDiagnostics,
   tracksError,
   tracksStatus,
 }) {
@@ -66,13 +65,6 @@ function PlaylistTracks({
       {selectedPlaylist && tracksStatus === "error" && tracksError && (
         <div className="notice error">
           <p>{tracksError}</p>
-        </div>
-      )}
-
-      {selectedPlaylist && trackDiagnostics && (
-        <div className="debug-panel">
-          <p className="debug-title">Step 3 diagnostics</p>
-          <pre>{JSON.stringify(trackDiagnostics, null, 2)}</pre>
         </div>
       )}
 

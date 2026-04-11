@@ -10,6 +10,7 @@ Current status: Step 3 is implemented.
 - Fetch Spotify playlists after authentication
 - Display playlist artwork, owner, track count, visibility, and Spotify links
 - Fetch tracks for a selected playlist and display track metadata
+- Added Step 4 groundwork for `trackTags` storage helpers
 
 Setup:
 
@@ -28,6 +29,12 @@ Notes:
 - for Cloudflare Pages, leaving it unset is the simplest option
 
 Next target: Step 4, "Fetch artist genres and prepare auto tags".
+
+Step 3 notes:
+
+- Playlist items currently come back in the Spotify API `item` field, so the app reads `item` first and only falls back to deprecated `track`
+- Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
+- Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
 
 ## Cloudflare
 
