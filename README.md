@@ -36,7 +36,7 @@ Step 4 notes:
 - Playlist items currently come back in the Spotify API `item` field, so the app reads `item` first and only falls back to deprecated `track`
 - Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
 - Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
-- Artist genres are fetched from Spotify in chunks of up to 50 artist IDs
+- Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, with a fallback to per-artist requests if the bulk endpoint is rejected
 - Generated auto tags stay in memory for now; Step 5 is where missing `trackTags.auto` entries should be persisted
 
 ## Cloudflare

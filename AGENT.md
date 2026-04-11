@@ -329,6 +329,7 @@ For Step 4 and Step 5:
 
 - derive artist IDs from the normalized track objects
 - fetch artist genres from Spotify in batches of up to 50 IDs
+- if Spotify rejects the bulk artist endpoint, fall back to per-artist requests before failing Step 4
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
 - keep generated auto tags in memory during Step 4; persist them in Step 5

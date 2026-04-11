@@ -342,7 +342,8 @@ function App() {
         if (!ignore) {
           const message = getSpotifyApiErrorMessage(
             error,
-            "Failed to fetch Spotify artist genres."
+            "Failed to fetch Spotify artist genres.",
+            "Spotify returned Forbidden while fetching artist genres. This app can still show tracks, but Spotify is rejecting artist metadata for the current session or app settings."
           );
           setTracks(mergeTrackTagsIntoTracks(rawTracks));
           setGenreError(message);

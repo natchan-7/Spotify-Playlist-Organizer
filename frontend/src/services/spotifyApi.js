@@ -246,19 +246,23 @@ function createArtistGenresMap(artists) {
   );
 }
 
-export async function fetchArtistGenres(accessToken, artistIds) {
-  const normalizedArtistIds = Array.from(
-    new Set(artistIds.filter((artistId) => typeof artistId === "string" && artistId))
+async function fetchSingleArtistGenres(accessToken, artistId) {
+  const payload = await fetchSpotifyPage(
+    `${SPOTIFY_API_URL}/artists/${artistId}`,
+    accessToken,
+    "Failed to fetch Spotify artist genres."
   );
 
-  if (normalizedArtistIds.length === 0) {
-    return {};
-  }
+  return {
+    [artistId]: Array.isArray(payload.genres) ? payload.genres : [],
+  };
+}
 
+async function fetchArtistGenresInChunks(accessToken, artistIds) {
   const artistGenresByArtistId = {};
 
-  for (let index = 0; index < normalizedArtistIds.length; index += 50) {
-    const chunk = normalizedArtistIds.slice(index, index + 50);
+  for (let index = 0; index < artistIds.length; index += 50) {
+    const chunk = artistIds.slice(index, index + 50);
     const url = new URL(`${SPOTIFY_API_URL}/artists`);
 
     url.searchParams.set("ids", chunk.join(","));
@@ -276,4 +280,37 @@ export async function fetchArtistGenres(accessToken, artistIds) {
   }
 
   return artistGenresByArtistId;
+}
+
+async function fetchArtistGenresIndividually(accessToken, artistIds) {
+  const artistGenresByArtistId = {};
+
+  for (const artistId of artistIds) {
+    Object.assign(
+      artistGenresByArtistId,
+      await fetchSingleArtistGenres(accessToken, artistId)
+    );
+  }
+
+  return artistGenresByArtistId;
+}
+
+export async function fetchArtistGenres(accessToken, artistIds) {
+  const normalizedArtistIds = Array.from(
+    new Set(artistIds.filter((artistId) => typeof artistId === "string" && artistId))
+  );
+
+  if (normalizedArtistIds.length === 0) {
+    return {};
+  }
+
+  try {
+    return await fetchArtistGenresInChunks(accessToken, normalizedArtistIds);
+  } catch (error) {
+    if (error instanceof Error && error.status === 403) {
+      return fetchArtistGenresIndividually(accessToken, normalizedArtistIds);
+    }
+
+    throw error;
+  }
 }
