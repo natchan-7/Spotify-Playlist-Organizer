@@ -26,6 +26,7 @@ Completed:
 - Step 1: Spotify OAuth login
 - Step 2: Fetch and display playlists
 - Step 3: Fetch and display tracks for the selected playlist
+- Step 4: Fetch artist genres and prepare auto tags
 
 Already implemented in `frontend/`:
 
@@ -37,9 +38,10 @@ Already implemented in `frontend/`:
 - normalized playlist cards with artwork, owner, visibility, track count, and Spotify link
 - on-demand playlist track fetch with pagination
 - market-aware playlist track requests
-- `trackTags` storage helpers for later steps
+- artist genre fetch in 50-ID batches
+- in-memory auto-tag preparation that preserves stored `trackTags.auto`
 
-The next implementation target is Step 4.
+The next implementation target is Step 5.
 
 ---
 
@@ -282,7 +284,7 @@ Current and planned endpoints:
 
 - `GET /me/playlists`
 - `GET /playlists/{id}/tracks`
-- `GET /artists/{id}`
+- `GET /artists?ids=...`
 - `POST /users/{user_id}/playlists`
 - `POST /playlists/{id}/tracks`
 
@@ -326,9 +328,11 @@ Do not:
 For Step 4 and Step 5:
 
 - derive artist IDs from the normalized track objects
-- fetch artist genres from Spotify
+- fetch artist genres from Spotify in batches of up to 50 IDs
+- if Spotify rejects the bulk artist endpoint, fall back to per-artist requests before failing Step 4
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
+- keep generated auto tags in memory during Step 4; persist them in Step 5
 
 ---
 
@@ -401,7 +405,7 @@ Required scope:
 
 Fetch artist genres and prepare auto tags.
 
-Status: next
+Status: complete
 
 Required scope:
 
@@ -411,6 +415,8 @@ Required scope:
 ### Step 5
 
 Persist auto tags in `trackTags`.
+
+Status: next
 
 Required scope:
 
