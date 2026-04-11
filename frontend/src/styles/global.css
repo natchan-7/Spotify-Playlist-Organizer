@@ -299,6 +299,30 @@ code {
   font-size: 0.9rem;
 }
 
+.debug-panel {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.debug-title {
+  margin: 0 0 0.6rem;
+  color: #f0d7a1;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.debug-panel pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #d7e0ec;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
 .track-list {
   display: grid;
   gap: 0.85rem;

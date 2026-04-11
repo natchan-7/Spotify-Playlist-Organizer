@@ -147,23 +147,52 @@ export async function fetchCurrentUserProfile(accessToken) {
   };
 }
 
-function normalizeTrackItem(item) {
+function createTrackDiagnostics(market) {
+  return {
+    market: market || "(none)",
+    pagesFetched: 0,
+    rawItems: 0,
+    normalizedTracks: 0,
+    nullTrackItems: 0,
+    localTrackItems: 0,
+    unsupportedTypeItems: 0,
+    fallbackIdItems: 0,
+  };
+}
+
+function normalizeTrackItem(item, diagnostics) {
   const track = item?.track;
 
-  if (!track || item?.is_local || track.is_local) {
+  if (!track) {
+    diagnostics.nullTrackItems += 1;
+    return null;
+  }
+
+  if (item?.is_local || track.is_local) {
+    diagnostics.localTrackItems += 1;
     return null;
   }
 
   if (track.type && track.type !== "track") {
+    diagnostics.unsupportedTypeItems += 1;
     return null;
   }
 
-  const normalizedId =
-    track.id ||
-    track.uri ||
-    [track.name, item?.added_at, track.artists?.map((artist) => artist.name).join("-")]
+  let normalizedId = track.id || track.uri;
+
+  if (!normalizedId) {
+    normalizedId = [
+      track.name,
+      item?.added_at,
+      track.artists?.map((artist) => artist.name).join("-"),
+    ]
       .filter(Boolean)
       .join("-");
+
+    diagnostics.fallbackIdItems += 1;
+  }
+
+  diagnostics.normalizedTracks += 1;
 
   return {
     id: normalizedId,
@@ -196,14 +225,19 @@ function getPlaylistTracksUrl(playlist) {
 export async function fetchPlaylistTracks(accessToken, playlist, market) {
   const tracks = [];
   const baseUrl = getPlaylistTracksUrl(playlist);
+  const diagnostics = createTrackDiagnostics(market);
 
   if (!baseUrl) {
-    return tracks;
+    return {
+      tracks,
+      diagnostics,
+    };
   }
 
   let nextUrl = baseUrl;
 
   while (nextUrl) {
+    diagnostics.pagesFetched += 1;
     const url = new URL(nextUrl);
     url.searchParams.set("limit", "100");
     url.searchParams.set("additional_types", "track");
@@ -218,13 +252,18 @@ export async function fetchPlaylistTracks(accessToken, playlist, market) {
       "Failed to fetch Spotify playlist tracks."
     );
 
+    diagnostics.rawItems += (payload.items || []).length;
+
     const normalized = (payload.items || [])
-      .map(normalizeTrackItem)
+      .map((item) => normalizeTrackItem(item, diagnostics))
       .filter(Boolean);
 
     tracks.push(...normalized);
     nextUrl = payload.next;
   }
 
-  return tracks;
+  return {
+    tracks,
+    diagnostics,
+  };
 }

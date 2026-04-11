@@ -24,7 +24,13 @@ function getTrackArtworkFallback(trackName) {
   return trackName ? trackName.slice(0, 1).toUpperCase() : "T";
 }
 
-function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus }) {
+function PlaylistTracks({
+  selectedPlaylist,
+  tracks,
+  trackDiagnostics,
+  tracksError,
+  tracksStatus,
+}) {
   return (
     <section className="panel">
       <div className="panel-header">
@@ -60,6 +66,13 @@ function PlaylistTracks({ selectedPlaylist, tracks, tracksError, tracksStatus })
       {selectedPlaylist && tracksStatus === "error" && tracksError && (
         <div className="notice error">
           <p>{tracksError}</p>
+        </div>
+      )}
+
+      {selectedPlaylist && trackDiagnostics && (
+        <div className="debug-panel">
+          <p className="debug-title">Step 3 diagnostics</p>
+          <pre>{JSON.stringify(trackDiagnostics, null, 2)}</pre>
         </div>
       )}
 
