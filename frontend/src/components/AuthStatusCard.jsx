@@ -55,7 +55,9 @@ function AuthStatusCard({
         <div className="notice error">
           <strong>Configuration required.</strong>
           <p>
-            Set <code>VITE_SPOTIFY_CLIENT_ID</code> in <code>frontend/.env</code>.
+            Set <code>VITE_SPOTIFY_CLIENT_ID</code> in <code>frontend/.env</code> for
+            local development, or add it in Cloudflare Worker Build Variables for
+            deployed environments.
           </p>
         </div>
       )}
