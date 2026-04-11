@@ -2,7 +2,7 @@
 
 This project is being implemented step by step following the strict order in `AGENT.md`.
 
-Current status: Step 4 is implemented.
+Current status: Step 5 is implemented.
 
 - Created a React + Vite app in `frontend/`
 - Implemented Spotify OAuth login with PKCE
@@ -12,6 +12,7 @@ Current status: Step 4 is implemented.
 - Fetch tracks for a selected playlist and display track metadata
 - Fetch artist genres in batches and prepare in-memory `autoTags`
 - Preserve existing stored `trackTags.auto` values instead of overwriting them
+- Persist newly generated automatic tags in `localStorage`
 
 Setup:
 
@@ -29,15 +30,16 @@ Notes:
 - if it is not set, the app uses the current site URL automatically
 - for Cloudflare Pages, leaving it unset is the simplest option
 
-Next target: Step 5, "Persist auto tags in trackTags".
+Next target: Step 6, "Implement user tag input and storage".
 
-Step 4 notes:
+Step 5 notes:
 
 - Playlist items currently come back in the Spotify API `item` field, so the app reads `item` first and only falls back to deprecated `track`
 - Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
 - Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
 - Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, with a fallback to per-artist requests if the bulk endpoint is rejected
-- Generated auto tags stay in memory for now; Step 5 is where missing `trackTags.auto` entries should be persisted
+- Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten
+- The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
 
 ## Cloudflare
 

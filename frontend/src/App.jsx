@@ -15,8 +15,10 @@ import {
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
 import {
+  getStoredTrackTagsMap,
   mergeAutoTagsIntoTracks,
   mergeTrackTagsIntoTracks,
+  persistGeneratedAutoTags,
 } from "./utils/trackTags";
 
 function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
@@ -83,6 +85,9 @@ function App() {
   const [tracksError, setTracksError] = useState("");
   const [genreStatus, setGenreStatus] = useState("idle");
   const [genreError, setGenreError] = useState("");
+  const [tagStorageStatus, setTagStorageStatus] = useState("idle");
+  const [tagStorageError, setTagStorageError] = useState("");
+  const [tagStorageSummary, setTagStorageSummary] = useState(null);
   const redirectUri = getSpotifyRedirectUri();
 
   const selectedPlaylist =
@@ -140,6 +145,9 @@ function App() {
     setTracksError("");
     setGenreStatus("idle");
     setGenreError("");
+    setTagStorageStatus("idle");
+    setTagStorageError("");
+    setTagStorageSummary(null);
   }
 
   async function handleLogin() {
@@ -170,6 +178,9 @@ function App() {
       setTracksError("");
       setGenreStatus("idle");
       setGenreError("");
+      setTagStorageStatus("idle");
+      setTagStorageError("");
+      setTagStorageSummary(null);
       return;
     }
 
@@ -245,6 +256,9 @@ function App() {
       setTracksError("");
       setGenreStatus("idle");
       setGenreError("");
+      setTagStorageStatus("idle");
+      setTagStorageError("");
+      setTagStorageSummary(null);
       return;
     }
 
@@ -255,6 +269,9 @@ function App() {
       setTracksError("");
       setGenreStatus("idle");
       setGenreError("");
+      setTagStorageStatus("idle");
+      setTagStorageError("");
+      setTagStorageSummary(null);
 
       try {
         const nextTracks = await fetchPlaylistTracks(
@@ -281,6 +298,9 @@ function App() {
           setTracksStatus("error");
           setGenreStatus("idle");
           setGenreError("");
+          setTagStorageStatus("idle");
+          setTagStorageError("");
+          setTagStorageSummary(null);
         }
       }
     }
@@ -296,12 +316,22 @@ function App() {
     if (!session?.accessToken || !selectedPlaylist || tracksStatus !== "success") {
       setGenreStatus("idle");
       setGenreError("");
+      setTagStorageStatus("idle");
+      setTagStorageError("");
+      setTagStorageSummary(null);
       return;
     }
 
     if (rawTracks.length === 0) {
       setGenreStatus("success");
       setGenreError("");
+      setTagStorageStatus("success");
+      setTagStorageError("");
+      setTagStorageSummary({
+        updatedTrackCount: 0,
+        savedAutoTagCount: 0,
+        createdEntryCount: 0,
+      });
       return;
     }
 
@@ -316,9 +346,18 @@ function App() {
     );
 
     if (artistIds.length === 0) {
-      setTracks(mergeAutoTagsIntoTracks(rawTracks, {}));
+      const storedTrackTagsMap = getStoredTrackTagsMap();
+
+      setTracks(mergeAutoTagsIntoTracks(rawTracks, {}, storedTrackTagsMap));
       setGenreStatus("success");
       setGenreError("");
+      setTagStorageStatus("success");
+      setTagStorageError("");
+      setTagStorageSummary({
+        updatedTrackCount: 0,
+        savedAutoTagCount: 0,
+        createdEntryCount: 0,
+      });
       return;
     }
 
@@ -335,7 +374,36 @@ function App() {
         );
 
         if (!ignore) {
-          setTracks(mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId));
+          let nextTrackTagsMap = getStoredTrackTagsMap();
+
+          try {
+            const persistenceResult = persistGeneratedAutoTags(
+              rawTracks,
+              artistGenresByArtistId,
+              nextTrackTagsMap
+            );
+
+            nextTrackTagsMap = persistenceResult.trackTagsMap;
+            setTagStorageStatus("success");
+            setTagStorageError("");
+            setTagStorageSummary({
+              updatedTrackCount: persistenceResult.updatedTrackCount,
+              savedAutoTagCount: persistenceResult.savedAutoTagCount,
+              createdEntryCount: persistenceResult.createdEntryCount,
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to save automatic tags in browser storage.";
+            setTagStorageStatus("error");
+            setTagStorageError(message);
+            setTagStorageSummary(null);
+          }
+
+          setTracks(
+            mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId, nextTrackTagsMap)
+          );
           setGenreStatus("success");
         }
       } catch (error) {
@@ -348,6 +416,9 @@ function App() {
           setTracks(mergeTrackTagsIntoTracks(rawTracks));
           setGenreError(message);
           setGenreStatus("error");
+          setTagStorageStatus("idle");
+          setTagStorageError("");
+          setTagStorageSummary(null);
         }
       }
     }
@@ -380,6 +451,9 @@ function App() {
       selectedPlaylist={selectedPlaylist}
       genreError={genreError}
       genreStatus={genreStatus}
+      tagStorageError={tagStorageError}
+      tagStorageStatus={tagStorageStatus}
+      tagStorageSummary={tagStorageSummary}
       tracks={tracks}
       tracksError={tracksError}
       tracksStatus={tracksStatus}
