@@ -1,0 +1,6 @@
+# Cloudflare Pages configuration for direct uploads with Wrangler.
+# If you create a Pages project with a different name, update `name`.
+
+name = "spotify-playlist-organizer"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-04-11"
