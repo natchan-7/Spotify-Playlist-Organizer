@@ -575,14 +575,6 @@ function App() {
       };
     }
 
-    if (!currentUserId) {
-      return {
-        ok: false,
-        reason: "profile",
-        message: "Current Spotify user id is unavailable. Log out and try again.",
-      };
-    }
-
     const normalizedTag = typeof userTag === "string" ? userTag.trim() : "";
     const normalizedPlaylistName =
       typeof playlistName === "string" ? playlistName.trim() : "";
@@ -628,7 +620,7 @@ function App() {
     setCreatedPlaylist(null);
 
     try {
-      const nextPlaylist = await createPlaylist(session.accessToken, currentUserId, {
+      const nextPlaylist = await createPlaylist(session.accessToken, {
         name: normalizedPlaylistName,
         description: `Created from "${sourcePlaylist.name}" using the user tag "${normalizedTag}".`,
         isPublic,

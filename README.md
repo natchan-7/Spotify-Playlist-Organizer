@@ -49,6 +49,7 @@ Step 8 notes:
 - User tags are added per track, duplicates are prevented, and removals update browser storage immediately
 - User tags are intentionally stored separately from `auto` tags under the same `trackTags` entry
 - New playlists are created from the currently selected playlist's user tags, then matching track URIs are added in batches of up to 100
+- Playlist creation uses Spotify's current `POST /me/playlists` endpoint rather than the deprecated user-id variant
 
 ## Cloudflare
 

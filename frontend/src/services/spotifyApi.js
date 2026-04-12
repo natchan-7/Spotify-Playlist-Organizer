@@ -438,9 +438,9 @@ async function postSpotifyJson(url, accessToken, body, fallbackMessage) {
   return payload;
 }
 
-export async function createPlaylist(accessToken, userId, details) {
+export async function createPlaylist(accessToken, details) {
   const payload = await postSpotifyJson(
-    `${SPOTIFY_API_URL}/users/${userId}/playlists`,
+    `${SPOTIFY_API_URL}/me/playlists`,
     accessToken,
     {
       name: details.name,
