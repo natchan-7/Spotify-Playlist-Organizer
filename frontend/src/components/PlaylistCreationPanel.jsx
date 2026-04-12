@@ -120,10 +120,6 @@ function PlaylistCreationPanel({
   }, [availableTagOptions]);
 
   useEffect(() => {
-    setTagSearchQuery(selectedTagValue);
-  }, [selectedTagValue]);
-
-  useEffect(() => {
     if (!selectedTagValue) {
       if (!isPlaylistNameDirty) {
         setPlaylistName("");
@@ -175,7 +171,7 @@ function PlaylistCreationPanel({
 
   function updateSelectedTagValue(nextTag) {
     setSelectedTagValue(nextTag);
-    setTagSearchQuery(nextTag);
+    setTagSearchQuery("");
     setIsTagMenuOpen(false);
     setFormError("");
     onResetPlaylistCreationState?.();
