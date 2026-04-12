@@ -49,7 +49,7 @@ Already implemented in `frontend/`:
 - localStorage persistence for newly generated automatic tags only
 - per-track user tag add/remove with duplicate prevention
 - combined auto-tag and user-tag display in track rows
-- playlist creation flow for tracks filtered by a selected user tag
+- playlist creation flow for tracks filtered by a selected automatic or user tag
 - browser-data management panel for cached genres and saved tags
 
 The core implementation is complete. Step 9 adds browser-data controls, and any further work is optional polish only.
@@ -470,6 +470,7 @@ Status: complete
 Required scope:
 
 - filter by `userTags`
+- allow filtering by either `autoTags` or `userTags`
 - create playlist with Spotify API
 - add matching track URIs to the new playlist
 

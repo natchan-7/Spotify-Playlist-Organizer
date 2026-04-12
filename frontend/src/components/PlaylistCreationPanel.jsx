@@ -11,7 +11,7 @@ function buildDefaultPlaylistName(selectedPlaylist, selectedTag) {
 
 function PlaylistCreationPanel({
   createdPlaylist,
-  onCreatePlaylistFromUserTag,
+  onCreatePlaylistFromTag,
   onResetPlaylistCreationState,
   playlistCreationError,
   playlistCreationStatus,
@@ -19,7 +19,8 @@ function PlaylistCreationPanel({
   tracks,
   tracksStatus,
 }) {
-  const [selectedUserTag, setSelectedUserTag] = useState("");
+  const [selectedTagType, setSelectedTagType] = useState("user");
+  const [selectedTagValue, setSelectedTagValue] = useState("");
   const [playlistName, setPlaylistName] = useState("");
   const [visibility, setVisibility] = useState("private");
   const [formError, setFormError] = useState("");
@@ -37,20 +38,36 @@ function PlaylistCreationPanel({
     [tracks]
   );
 
+  const availableAutoTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          tracks.flatMap((track) =>
+            (track.autoTags || []).filter((tag) => typeof tag === "string" && tag)
+          )
+        )
+      ).sort((left, right) => left.localeCompare(right)),
+    [tracks]
+  );
+
+  const availableTagOptions =
+    selectedTagType === "auto" ? availableAutoTags : availableUserTags;
+
   const matchedTracks = useMemo(() => {
-    if (!selectedUserTag) {
+    if (!selectedTagValue) {
       return [];
     }
 
     return tracks.filter((track) =>
-      (track.userTags || []).some(
-        (tag) => tag.toLowerCase() === selectedUserTag.toLowerCase()
+      (selectedTagType === "auto" ? track.autoTags : track.userTags || []).some((tag) =>
+        tag.toLowerCase() === selectedTagValue.toLowerCase()
       )
     );
-  }, [selectedUserTag, tracks]);
+  }, [selectedTagType, selectedTagValue, tracks]);
 
   useEffect(() => {
-    setSelectedUserTag("");
+    setSelectedTagType("user");
+    setSelectedTagValue("");
     setPlaylistName("");
     setVisibility("private");
     setFormError("");
@@ -58,20 +75,36 @@ function PlaylistCreationPanel({
   }, [selectedPlaylist?.id]);
 
   useEffect(() => {
-    if (availableUserTags.length === 0) {
-      setSelectedUserTag("");
+    if (availableUserTags.length > 0) {
+      setSelectedTagType((currentType) =>
+        currentType === "auto" || currentType === "user" ? currentType : "user"
+      );
       return;
     }
 
-    setSelectedUserTag((currentTag) =>
-      currentTag && availableUserTags.includes(currentTag)
-        ? currentTag
-        : availableUserTags[0]
-    );
-  }, [availableUserTags]);
+    if (availableAutoTags.length > 0) {
+      setSelectedTagType("auto");
+      return;
+    }
+
+    setSelectedTagValue("");
+  }, [availableAutoTags.length, availableUserTags.length]);
 
   useEffect(() => {
-    if (!selectedUserTag) {
+    if (availableTagOptions.length === 0) {
+      setSelectedTagValue("");
+      return;
+    }
+
+    setSelectedTagValue((currentTag) =>
+      currentTag && availableTagOptions.includes(currentTag)
+        ? currentTag
+        : availableTagOptions[0]
+    );
+  }, [availableTagOptions]);
+
+  useEffect(() => {
+    if (!selectedTagValue) {
       if (!isPlaylistNameDirty) {
         setPlaylistName("");
       }
@@ -79,15 +112,15 @@ function PlaylistCreationPanel({
     }
 
     if (!isPlaylistNameDirty) {
-      setPlaylistName(buildDefaultPlaylistName(selectedPlaylist, selectedUserTag));
+      setPlaylistName(buildDefaultPlaylistName(selectedPlaylist, selectedTagValue));
     }
-  }, [isPlaylistNameDirty, selectedPlaylist, selectedUserTag]);
+  }, [isPlaylistNameDirty, selectedPlaylist, selectedTagValue]);
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!selectedUserTag) {
-      setFormError("Select a user tag before creating a playlist.");
+    if (!selectedTagValue) {
+      setFormError("Select an auto tag or user tag before creating a playlist.");
       return;
     }
 
@@ -98,9 +131,10 @@ function PlaylistCreationPanel({
 
     setFormError("");
 
-    const result = await onCreatePlaylistFromUserTag?.({
+    const result = await onCreatePlaylistFromTag?.({
       sourcePlaylist: selectedPlaylist,
-      userTag: selectedUserTag,
+      tagType: selectedTagType,
+      tagValue: selectedTagValue,
       playlistName,
       isPublic: visibility === "public",
     });
@@ -112,8 +146,14 @@ function PlaylistCreationPanel({
     }
   }
 
-  function updateSelectedUserTag(nextTag) {
-    setSelectedUserTag(nextTag);
+  function updateSelectedTagType(nextTagType) {
+    setSelectedTagType(nextTagType);
+    setFormError("");
+    onResetPlaylistCreationState?.();
+  }
+
+  function updateSelectedTagValue(nextTag) {
+    setSelectedTagValue(nextTag);
     setFormError("");
     onResetPlaylistCreationState?.();
   }
@@ -139,20 +179,20 @@ function PlaylistCreationPanel({
           <h2>Create a filtered Spotify playlist</h2>
           {selectedPlaylist && (
             <p className="panel-subtitle">
-              Build a new playlist from the user tags attached to {selectedPlaylist.name}.
+              Build a new playlist from the automatic or user tags attached to {selectedPlaylist.name}.
             </p>
           )}
         </div>
         {selectedPlaylist && tracksStatus === "success" && (
           <span className="playlist-count">
-            {availableUserTags.length} user tags
+            {availableAutoTags.length + availableUserTags.length} tags ready
           </span>
         )}
       </div>
 
       {!selectedPlaylist && (
         <div className="notice">
-          <p>Select a playlist first, then add user tags to its tracks.</p>
+          <p>Select a playlist first, then choose an automatic or user tag.</p>
         </div>
       )}
 
@@ -162,23 +202,50 @@ function PlaylistCreationPanel({
         </div>
       )}
 
-      {selectedPlaylist && tracksStatus === "success" && availableUserTags.length === 0 && (
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        availableUserTags.length === 0 &&
+        availableAutoTags.length === 0 && (
         <div className="notice">
-          <p>Add at least one user tag to a track before creating a playlist.</p>
+          <p>Wait for automatic tags or add a user tag to a track before creating a playlist.</p>
         </div>
       )}
 
-      {selectedPlaylist && tracksStatus === "success" && availableUserTags.length > 0 && (
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        (availableUserTags.length > 0 || availableAutoTags.length > 0) && (
         <form className="playlist-create-form" onSubmit={handleSubmit}>
           <label className="playlist-create-field">
-            <span className="playlist-create-label">User tag</span>
+            <span className="playlist-create-label">Tag source</span>
             <select
               className="playlist-create-select"
-              value={selectedUserTag}
-              onChange={(event) => updateSelectedUserTag(event.target.value)}
+              value={selectedTagType}
+              onChange={(event) => updateSelectedTagType(event.target.value)}
             >
-              <option value="">Select a user tag</option>
-              {availableUserTags.map((tag) => (
+              {availableAutoTags.length > 0 && (
+                <option value="auto">Automatic tags</option>
+              )}
+              {availableUserTags.length > 0 && (
+                <option value="user">User tags</option>
+              )}
+            </select>
+          </label>
+
+          <label className="playlist-create-field">
+            <span className="playlist-create-label">
+              {selectedTagType === "auto" ? "Automatic tag" : "User tag"}
+            </span>
+            <select
+              className="playlist-create-select"
+              value={selectedTagValue}
+              onChange={(event) => updateSelectedTagValue(event.target.value)}
+            >
+              <option value="">
+                {selectedTagType === "auto"
+                  ? "Select an automatic tag"
+                  : "Select a user tag"}
+              </option>
+              {availableTagOptions.map((tag) => (
                 <option key={tag} value={tag}>
                   {tag}
                 </option>
@@ -209,7 +276,7 @@ function PlaylistCreationPanel({
             </select>
           </label>
 
-          {selectedUserTag && (
+          {selectedTagValue && (
             <div className="creation-summary-grid">
               <div className="creation-summary-card">
                 <span className="creation-summary-label">Matching tracks</span>
@@ -217,7 +284,11 @@ function PlaylistCreationPanel({
               </div>
               <div className="creation-summary-card">
                 <span className="creation-summary-label">Selected tag</span>
-                <strong>{selectedUserTag}</strong>
+                <strong>{selectedTagValue}</strong>
+              </div>
+              <div className="creation-summary-card">
+                <span className="creation-summary-label">Tag source</span>
+                <strong>{selectedTagType === "auto" ? "Automatic" : "User"}</strong>
               </div>
               <div className="creation-summary-card">
                 <span className="creation-summary-label">Visibility</span>
@@ -241,7 +312,7 @@ function PlaylistCreationPanel({
           {playlistCreationStatus === "success" && createdPlaylist && (
             <div className="notice success-notice">
               <p>
-                Created "{createdPlaylist.name}" from the user tag "{createdPlaylist.userTag}".
+                Created "{createdPlaylist.name}" from the {createdPlaylist.tagTypeLabel} tag "{createdPlaylist.tagValue}".
               </p>
               <p>
                 Added {createdPlaylist.addedTrackCount} tracks from {selectedPlaylist?.name}
@@ -270,7 +341,7 @@ function PlaylistCreationPanel({
               type="submit"
               disabled={
                 playlistCreationStatus === "loading" ||
-                !selectedUserTag ||
+                !selectedTagValue ||
                 matchedTracks.length === 0
               }
             >
