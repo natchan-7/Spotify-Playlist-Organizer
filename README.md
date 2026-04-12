@@ -42,6 +42,7 @@ Step 6 and Step 7 notes:
 - Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
 - Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, with a fallback to per-artist requests if the bulk endpoint is rejected
 - Artist genre results are cached in `localStorage` for repeated playlist views so the app can reuse earlier lookups
+- Even if Spotify rate-limits a later artist lookup, already fetched artist genres stay cached for the next retry
 - Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten
 - The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
 - User tags are added per track, duplicates are prevented, and removals update browser storage immediately

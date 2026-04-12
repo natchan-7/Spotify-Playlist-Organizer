@@ -291,6 +291,13 @@ function createArtistGenreCacheEntries(artistGenresByArtistId, cachedAt = Date.n
   );
 }
 
+function mergeArtistGenreCacheEntries(artistGenreCache, artistGenresByArtistId) {
+  return {
+    ...artistGenreCache,
+    ...createArtistGenreCacheEntries(artistGenresByArtistId),
+  };
+}
+
 function splitArtistIdsByCache(artistIds, artistGenreCache) {
   const cachedArtistGenresByArtistId = {};
   const missingArtistIds = [];
@@ -324,8 +331,9 @@ async function fetchSingleArtistGenres(accessToken, artistId) {
   };
 }
 
-async function fetchArtistGenresInChunks(accessToken, artistIds) {
+async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCache) {
   const artistGenresByArtistId = {};
+  let nextArtistGenreCache = { ...artistGenreCache };
 
   for (let index = 0; index < artistIds.length; index += 50) {
     const chunk = artistIds.slice(index, index + 50);
@@ -339,16 +347,33 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
         accessToken,
         "Failed to fetch Spotify artist genres."
       );
+      const chunkArtistGenresByArtistId = createArtistGenresMap(payload.artists || []);
 
       Object.assign(
         artistGenresByArtistId,
-        createArtistGenresMap(payload.artists || [])
+        chunkArtistGenresByArtistId
       );
+      nextArtistGenreCache = mergeArtistGenreCacheEntries(
+        nextArtistGenreCache,
+        chunkArtistGenresByArtistId
+      );
+      saveArtistGenreCache(nextArtistGenreCache);
     } catch (error) {
       if (error instanceof Error && error.status === 403) {
+        const individualArtistGenresByArtistId =
+          await fetchArtistGenresIndividually(
+            accessToken,
+            chunk,
+            nextArtistGenreCache
+          );
+
         Object.assign(
           artistGenresByArtistId,
-          await fetchArtistGenresIndividually(accessToken, chunk)
+          individualArtistGenresByArtistId
+        );
+        nextArtistGenreCache = mergeArtistGenreCacheEntries(
+          nextArtistGenreCache,
+          individualArtistGenresByArtistId
         );
         continue;
       }
@@ -360,18 +385,34 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
   return artistGenresByArtistId;
 }
 
-async function fetchArtistGenresIndividually(accessToken, artistIds) {
+async function fetchArtistGenresIndividually(accessToken, artistIds, artistGenreCache) {
   const artistGenresByArtistId = {};
+  let nextArtistGenreCache = { ...artistGenreCache };
 
   for (const artistId of artistIds) {
     try {
-      Object.assign(
-        artistGenresByArtistId,
-        await fetchSingleArtistGenres(accessToken, artistId)
+      const singleArtistGenresByArtistId = await fetchSingleArtistGenres(
+        accessToken,
+        artistId
       );
+      Object.assign(artistGenresByArtistId, singleArtistGenresByArtistId);
+      nextArtistGenreCache = mergeArtistGenreCacheEntries(
+        nextArtistGenreCache,
+        singleArtistGenresByArtistId
+      );
+      saveArtistGenreCache(nextArtistGenreCache);
     } catch (error) {
       if (error instanceof Error && error.status === 403) {
-        artistGenresByArtistId[artistId] = [];
+        const emptyArtistGenresByArtistId = {
+          [artistId]: [],
+        };
+
+        Object.assign(artistGenresByArtistId, emptyArtistGenresByArtistId);
+        nextArtistGenreCache = mergeArtistGenreCacheEntries(
+          nextArtistGenreCache,
+          emptyArtistGenresByArtistId
+        );
+        saveArtistGenreCache(nextArtistGenreCache);
         continue;
       }
 
@@ -403,14 +444,9 @@ export async function fetchArtistGenres(accessToken, artistIds) {
 
   const fetchedArtistGenresByArtistId = await fetchArtistGenresInChunks(
     accessToken,
-    missingArtistIds
+    missingArtistIds,
+    artistGenreCache
   );
-  const nextArtistGenreCache = {
-    ...artistGenreCache,
-    ...createArtistGenreCacheEntries(fetchedArtistGenresByArtistId),
-  };
-
-  saveArtistGenreCache(nextArtistGenreCache);
 
   return {
     ...cachedArtistGenresByArtistId,

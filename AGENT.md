@@ -337,6 +337,7 @@ For Step 4 and Step 5:
 - derive artist IDs from the normalized track objects
 - fetch artist genres from Spotify in batches of up to 50 IDs
 - cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
+- save artist genre cache incrementally so partial success is preserved even if a later request is rate-limited
 - if Spotify rejects the bulk artist endpoint, fall back to per-artist requests before failing Step 4
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
