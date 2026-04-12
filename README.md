@@ -1,87 +1,94 @@
-# Spotify-Playlist-Organizer
+# Spotify Playlist Organizer
 
-This project is being implemented step by step following the strict order in `AGENT.md`.
+Spotify のプレイリストを読み込み、曲ごとにタグを付けて、タグで絞り込んだ新しいプレイリストを作るためのアプリです。
 
-Current status: Step 9 is implemented.
+## できること
 
-- Created a React + Vite app in `frontend/`
-- Implemented Spotify OAuth login with PKCE
-- Exchange the callback code for an access token and save it in localStorage
-- Fetch Spotify playlists after authentication
-- Display playlist artwork, owner, track count, visibility, and Spotify links
-- Fetch tracks for a selected playlist and display track metadata
-- Fetch artist genres in batches and prepare in-memory `autoTags`
-- Preserve existing stored `trackTags.auto` values instead of overwriting them
-- Persist newly generated automatic tags in `localStorage`
-- Add and remove per-track user tags with immediate `localStorage` updates
-- Display automatic tags and user tags together in each track row
-- Cache artist genre lookups in `localStorage` to reduce Spotify rate-limit errors
-- Create a new Spotify playlist from tracks filtered by a selected automatic or user tag
-- Review and clear cached browser data for artist genres and saved tags
+- Spotify にログインする
+- 自分のプレイリスト一覧を見る
+- 選択したプレイリストの曲を確認する
+- 自動タグを付ける
+  - Spotify のジャンル情報があればそれを利用
+  - ジャンル情報が弱い場合はアーティスト名を補助タグとして利用
+- 手動タグを追加・削除する
+- 自動タグまたは手動タグで曲を絞り込み、新しい Spotify プレイリストを作る
+- ブラウザに保存されたタグやキャッシュを確認・削除する
 
-Setup:
+## 使い方
 
-1. Create `frontend/.env` from `frontend/.env.example`
-2. Set `VITE_SPOTIFY_CLIENT_ID`
-3. Register the login callback URL in your Spotify app settings
+1. アプリを開いて `Spotifyでログイン` を押します。
+2. プレイリスト一覧から見たいプレイリストを選びます。
+3. 楽曲一覧で自動タグを確認し、必要に応じて手動タグを追加します。
+4. `プレイリスト作成` で使いたいタグを選び、新しいプレイリストを作成します。
+5. 必要なら `保存データの管理` からキャッシュや保存済みタグを削除します。
 
-Local callback URL:
+## 画面の見方
+
+- `Spotifyログイン`
+  - ログイン状態とリダイレクト URI を確認できます
+- `プレイリスト一覧`
+  - 自分のプレイリストを確認して選択できます
+- `楽曲一覧`
+  - 曲情報、自動タグ、手動タグを確認できます
+- `プレイリスト作成`
+  - 自動タグまたは手動タグで絞り込んだ新しいプレイリストを作れます
+- `保存データの管理`
+  - ブラウザ内に保存されたタグやアーティスト情報キャッシュを管理できます
+
+## 注意点
+
+- Spotify の仕様上、一覧に見えていても楽曲を取得できないプレイリストがあります
+  - 自分が所有しているか、共同編集しているプレイリストが主な対象です
+- Spotify のアーティスト情報が不足している場合、自動タグが少なくなることがあります
+- Spotify の rate limit に当たると、一時的に自動タグ取得が失敗することがあります
+- タグやキャッシュはブラウザの `localStorage` に保存されます
+  - 別ブラウザや別端末には自動では共有されません
+
+## Spotify アプリ設定
+
+このアプリを使うには Spotify Developer Dashboard 側の設定が必要です。
+
+- `VITE_SPOTIFY_CLIENT_ID` を設定する
+- リダイレクト URI を Spotify アプリに登録する
+- `Development mode` の場合は、利用する Spotify アカウントを `Users and Access` に追加する
+
+## ローカル開発
+
+1. `frontend/.env` を作成します
+2. `VITE_SPOTIFY_CLIENT_ID` を設定します
+3. 必要なら `VITE_SPOTIFY_REDIRECT_URI` を設定します
+4. `frontend/` でアプリを起動します
+
+ローカルのコールバック URL 例:
 
 - `http://127.0.0.1:5173/`
 
-Notes:
+`VITE_SPOTIFY_REDIRECT_URI` を設定しない場合は、現在開いている URL を自動で使います。
 
-- `VITE_SPOTIFY_REDIRECT_URI` is optional
-- if it is not set, the app uses the current site URL automatically
-- for Cloudflare Pages, leaving it unset is the simplest option
+## Cloudflare で公開する場合
 
-Next target: optional polish only. The end-to-end flow and browser-data controls are implemented.
+Cloudflare Worker Builds を使って公開できます。
 
-Step 9 notes:
-
-- Playlist items currently come back in the Spotify API `item` field, so the app reads `item` first and only falls back to deprecated `track`
-- Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
-- Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
-- Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, and `403` artist chunks are cached as empty results instead of retrying per artist
-- Artist genre results are cached in `localStorage` for repeated playlist views so the app can reuse earlier lookups
-- Even if Spotify rate-limits a later artist lookup, already fetched artist genres stay cached for the next retry
-- When Spotify returns no usable genres, automatic tags fall back to normalized artist names so the UI still has a useful starting point
-- Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten
-- The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
-- User tags are added per track, duplicates are prevented, and removals update browser storage immediately
-- User tags are intentionally stored separately from `auto` tags under the same `trackTags` entry
-- New playlists are created from the currently selected playlist's automatic or user tags, then matching track URIs are added in batches of up to 100 through Spotify's playlist items endpoint
-- Playlist creation uses Spotify's current `POST /me/playlists` endpoint rather than the deprecated user-id variant
-- The Step 8 panel now auto-selects available user tags, clears stale creation messages when inputs change, and surfaces success details more clearly
-- The Step 9 panel exposes browser-side cache counts and lets the user clear artist genre cache or saved track tags without leaving the app
-
-## Cloudflare
-
-This frontend can be deployed from the Cloudflare dashboard using Worker Builds.
-
-If your dashboard does not show an output directory field, that is expected.
-The static asset directory is defined in `frontend/wrangler.toml`.
-
-Recommended Worker Build settings:
+推奨設定:
 
 1. Root directory: `frontend`
 2. Build command: `npm run build`
 3. Deploy command: `npm run cf:deploy`
 4. Version command: `npm run cf:versions`
-5. Variables and secrets: add `VITE_SPOTIFY_CLIENT_ID`
-6. Leave `VITE_SPOTIFY_REDIRECT_URI` unset unless you need a fixed callback URL
+5. Variables and secrets: `VITE_SPOTIFY_CLIENT_ID`
 
-`frontend/wrangler.toml` serves the built app from `./dist` and uses SPA fallback routing.
+補足:
 
-After the first successful deploy:
+- `frontend/wrangler.toml` で `dist` を配信する設定になっています
+- Spotify のリダイレクト URI は、公開 URL と完全一致で登録する必要があります
+- Preview URL を使う場合は、その Preview URL も Spotify 側に登録が必要です
 
-1. Open the deployed Cloudflare URL from the `Visit` button
-2. Confirm the redirect URI shown on the login card
-3. Register that exact URL in the Spotify app settings
-4. Re-deploy if needed and test the login flow again
+## 保存データについて
 
-Important:
+このアプリは主に次の情報をブラウザに保存します。
 
-- Cloudflare CLI authentication is still required on the machine that deploys
-- Spotify redirect URIs must exactly match the deployed URL
-- Preview URLs may fail Spotify OAuth unless that exact preview URL is also registered in Spotify
+- Spotify セッション
+- 自動タグと手動タグ
+- アーティスト情報キャッシュ
+
+不要になった場合は、アプリ内の `保存データの管理` から削除できます。

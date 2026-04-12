@@ -12,10 +12,10 @@ function decodeDescription(description) {
 
 function getVisibilityLabel(playlist) {
   if (playlist.isCollaborative) {
-    return "Collaborative";
+    return "共同編集";
   }
 
-  return playlist.isPublic ? "Public" : "Private";
+  return playlist.isPublic ? "公開" : "非公開";
 }
 
 function canViewPlaylistTracks(playlist, currentUserId) {
@@ -42,23 +42,23 @@ function PlaylistCollection({
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Step 2 / Playlists</p>
-          <h2>Your Spotify playlists</h2>
+          <p className="eyebrow">プレイリスト一覧</p>
+          <h2>あなたのSpotifyプレイリスト</h2>
         </div>
         {playlistsStatus === "success" && (
-          <span className="playlist-count">{playlists.length} loaded</span>
+          <span className="playlist-count">{playlists.length}件</span>
         )}
       </div>
 
       {playlistsStatus === "idle" && (
         <div className="notice">
-          <p>Log in to load your Spotify playlists.</p>
+          <p>ログインするとプレイリストを読み込めます。</p>
         </div>
       )}
 
       {playlistsStatus === "loading" && (
         <div className="notice">
-          <p>Fetching playlists from Spotify...</p>
+          <p>Spotify からプレイリストを取得しています...</p>
         </div>
       )}
 
@@ -70,7 +70,7 @@ function PlaylistCollection({
 
       {playlistsStatus === "success" && playlists.length === 0 && (
         <div className="notice">
-          <p>No playlists were returned for this Spotify account yet.</p>
+          <p>この Spotify アカウントには、まだプレイリストがありません。</p>
         </div>
       )}
 
@@ -104,7 +104,7 @@ function PlaylistCollection({
                     <span className="playlist-pill">{getVisibilityLabel(playlist)}</span>
                   </div>
                   <p className="playlist-meta">
-                    {playlist.totalTracks} tracks by {playlist.ownerName}
+                    {playlist.totalTracks}曲 / {playlist.ownerName}
                   </p>
                   {playlist.description && (
                     <p className="playlist-description">
@@ -113,7 +113,7 @@ function PlaylistCollection({
                   )}
                   {!canViewTracks && (
                     <p className="playlist-helper">
-                      Spotify only returns tracks for playlists you own or collaborate on.
+                      自分が所有しているか共同編集しているプレイリストのみ楽曲を表示できます。
                     </p>
                   )}
                   <div className="playlist-card-footer">
@@ -124,10 +124,10 @@ function PlaylistCollection({
                         rel="noreferrer"
                         target="_blank"
                       >
-                        Open in Spotify
+                        Spotifyで開く
                       </a>
                     ) : (
-                      <span className="playlist-link disabled">Spotify link unavailable</span>
+                      <span className="playlist-link disabled">Spotifyリンクなし</span>
                     )}
                     <button
                       className="playlist-select-button"
@@ -136,10 +136,10 @@ function PlaylistCollection({
                       disabled={isSelected || !canViewTracks}
                     >
                       {isSelected
-                        ? "Selected"
+                        ? "選択中"
                         : canViewTracks
-                          ? "View tracks"
-                          : "Unavailable"}
+                          ? "曲を見る"
+                          : "利用不可"}
                     </button>
                   </div>
                 </div>
