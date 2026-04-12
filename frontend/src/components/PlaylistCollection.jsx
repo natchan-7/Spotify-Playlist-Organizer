@@ -89,7 +89,7 @@ function PlaylistCollection({
                   {playlist.imageUrl ? (
                     <img
                       src={playlist.imageUrl}
-                      alt={`${playlist.name} cover art`}
+                      alt={`${playlist.name} のカバー画像`}
                       loading="lazy"
                     />
                   ) : (

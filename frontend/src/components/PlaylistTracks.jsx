@@ -55,6 +55,7 @@ function PlaylistTracks({
   tracksStatus,
 }) {
   const taggedTrackCount = tracks.filter((track) => track.autoTags?.length > 0).length;
+  const userTaggedTrackCount = tracks.filter((track) => track.userTags?.length > 0).length;
   const totalAutoTagCount = tracks.reduce(
     (count, track) => count + (track.autoTags?.length || 0),
     0
@@ -198,6 +199,23 @@ function PlaylistTracks({
         </div>
       )}
 
+      {selectedPlaylist && tracksStatus === "success" && tracks.length > 0 && (
+        <div className="creation-summary-grid track-summary-grid">
+          <div className="creation-summary-card">
+            <span className="creation-summary-label">表示中の楽曲</span>
+            <strong>{tracks.length}曲</strong>
+          </div>
+          <div className="creation-summary-card">
+            <span className="creation-summary-label">自動タグ付き</span>
+            <strong>{taggedTrackCount}曲</strong>
+          </div>
+          <div className="creation-summary-card">
+            <span className="creation-summary-label">手動タグ付き</span>
+            <strong>{userTaggedTrackCount}曲</strong>
+          </div>
+        </div>
+      )}
+
       {selectedPlaylist &&
         tracksStatus === "success" &&
         tracks.length > 0 &&
@@ -286,7 +304,7 @@ function PlaylistTracks({
                 {track.thumbnailUrl ? (
                   <img
                     src={track.thumbnailUrl}
-                    alt={`${track.album} album art`}
+                    alt={`${track.album} のジャケット画像`}
                     loading="lazy"
                   />
                 ) : (
@@ -317,8 +335,11 @@ function PlaylistTracks({
                         className="user-tag"
                         type="button"
                         onClick={() => handleUserTagRemove(track.id, tag)}
+                        aria-label={`${formatTagLabel(tag)} を削除`}
+                        title={`${formatTagLabel(tag)} を削除`}
                       >
-                        {formatTagLabel(tag)} x
+                        <span>{formatTagLabel(tag)}</span>
+                        <span aria-hidden="true">×</span>
                       </button>
                     ))}
                   </div>
