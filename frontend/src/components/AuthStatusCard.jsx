@@ -16,6 +16,7 @@ function AuthStatusCard({
   errorMessage,
   isAuthenticated,
   onLogin,
+  readmeUrl,
   playlistsCount,
   playlistsStatus,
   redirectUri,
@@ -50,6 +51,19 @@ function AuthStatusCard({
       <p className="helper redirect-helper">
         リダイレクトURI: <code>{redirectUri}</code>
       </p>
+      <div className="readme-callout">
+        <p className="helper">
+          使い方やセットアップ手順は GitHub の README から確認できます。
+        </p>
+        <a
+          className="secondary-button external-link-button"
+          href={readmeUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          README を開く
+        </a>
+      </div>
 
       {!hasConfig && (
         <div className="notice error">
