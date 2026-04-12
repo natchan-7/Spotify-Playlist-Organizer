@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import AuthStatusCard from "../components/AuthStatusCard";
+import BrowserDataPanel from "../components/BrowserDataPanel";
 import PlaylistCollection from "../components/PlaylistCollection";
 import PlaylistCreationPanel from "../components/PlaylistCreationPanel";
 import PlaylistTracks from "../components/PlaylistTracks";
@@ -41,6 +42,13 @@ function AuthPage(props) {
           selectedPlaylist={props.selectedPlaylist}
           tracks={props.tracks}
           tracksStatus={props.tracksStatus}
+        />
+        <BrowserDataPanel
+          browserDataNotice={props.browserDataNotice}
+          browserDataSummary={props.browserDataSummary}
+          isAuthenticated={props.isAuthenticated}
+          onClearArtistGenreCache={props.onClearArtistGenreCache}
+          onClearStoredTrackTags={props.onClearStoredTrackTags}
         />
       </div>
     </main>

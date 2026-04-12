@@ -31,6 +31,7 @@ Completed:
 - Step 6: Implement user tag input and storage
 - Step 7: Display auto tags and user tags together
 - Step 8: Create a new playlist from tracks filtered by a selected user tag
+- Step 9: Manage cached browser data for recovery and debugging
 
 Already implemented in `frontend/`:
 
@@ -49,8 +50,9 @@ Already implemented in `frontend/`:
 - per-track user tag add/remove with duplicate prevention
 - combined auto-tag and user-tag display in track rows
 - playlist creation flow for tracks filtered by a selected user tag
+- browser-data management panel for cached genres and saved tags
 
-The core implementation is complete. Further work is optional polish only.
+The core implementation is complete. Step 9 adds browser-data controls, and any further work is optional polish only.
 
 ---
 
@@ -469,6 +471,18 @@ Required scope:
 - filter by `userTags`
 - create playlist with Spotify API
 - add matching track URIs to the new playlist
+
+### Step 9
+
+Manage cached browser data for recovery and debugging.
+
+Status: complete
+
+Required scope:
+
+- show browser-side counts for artist genre cache and saved track tags
+- allow clearing artist genre cache
+- allow clearing saved track tags
 
 ---
 

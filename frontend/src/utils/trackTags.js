@@ -64,6 +64,10 @@ export function saveTrackTagsMap(trackTagsMap) {
   localStorage.setItem(TRACK_TAGS_KEY, JSON.stringify(trackTagsMap));
 }
 
+export function clearStoredTrackTags() {
+  localStorage.removeItem(TRACK_TAGS_KEY);
+}
+
 export function getTrackTags(trackId, trackTagsMap = getStoredTrackTagsMap()) {
   const tags = trackTagsMap?.[trackId];
 
