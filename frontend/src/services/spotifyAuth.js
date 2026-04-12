@@ -70,7 +70,7 @@ function ensureAuthConfig() {
   const clientId = getClientId();
 
   if (!clientId) {
-    throw new Error("Missing VITE_SPOTIFY_CLIENT_ID.");
+    throw new Error("VITE_SPOTIFY_CLIENT_ID が設定されていません。");
   }
 
   return {
@@ -119,7 +119,7 @@ export async function exchangeCodeForToken() {
     clearAuthQueryParams();
     clearCodeVerifier();
     removeStoredAuthState();
-    throw new Error(`Spotify authorization failed: ${error}`);
+    throw new Error(`Spotify 認証に失敗しました: ${error}`);
   }
 
   const code = params.get("code");
@@ -128,14 +128,14 @@ export async function exchangeCodeForToken() {
 
   if (!code || !state || !verifier) {
     clearAuthQueryParams();
-    throw new Error("Missing OAuth callback data.");
+    throw new Error("OAuth コールバックに必要な情報が不足しています。");
   }
 
   if (!validateStoredAuthState(state)) {
     clearAuthQueryParams();
     clearCodeVerifier();
     removeStoredAuthState();
-    throw new Error("Invalid OAuth state.");
+    throw new Error("OAuth の state が一致しません。");
   }
 
   // Consume the callback immediately so React StrictMode does not retry the
@@ -167,7 +167,7 @@ export async function exchangeCodeForToken() {
       payload?.error_description ||
       payload?.error ||
       payload?.message ||
-      "Token exchange failed.";
+      "トークンの取得に失敗しました。";
     throw new Error(message);
   }
 
