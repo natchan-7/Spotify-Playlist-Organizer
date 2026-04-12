@@ -48,7 +48,7 @@ Step 8 notes:
 - The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
 - User tags are added per track, duplicates are prevented, and removals update browser storage immediately
 - User tags are intentionally stored separately from `auto` tags under the same `trackTags` entry
-- New playlists are created from the currently selected playlist's user tags, then matching track URIs are added in batches of up to 100
+- New playlists are created from the currently selected playlist's user tags, then matching track URIs are added in batches of up to 100 through Spotify's playlist items endpoint
 - Playlist creation uses Spotify's current `POST /me/playlists` endpoint rather than the deprecated user-id variant
 
 ## Cloudflare

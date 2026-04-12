@@ -438,6 +438,36 @@ async function postSpotifyJson(url, accessToken, body, fallbackMessage) {
   return payload;
 }
 
+async function postSpotifyWithoutJsonBody(url, accessToken, fallbackMessage) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: createAuthorizedHeaders(accessToken),
+  });
+  const payload = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    const retryAfter = response.headers.get("Retry-After");
+    let message =
+      payload?.error?.message ||
+      payload?.message ||
+      fallbackMessage ||
+      "Spotify request failed.";
+
+    if (response.status === 429) {
+      message = retryAfter
+        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
+        : "Spotify rate limit reached. Wait a moment and try again.";
+    }
+
+    const error = new Error(message);
+    error.status = response.status;
+    error.retryAfter = retryAfter ? Number(retryAfter) : null;
+    throw error;
+  }
+
+  return payload;
+}
+
 export async function createPlaylist(accessToken, details) {
   const payload = await postSpotifyJson(
     `${SPOTIFY_API_URL}/me/playlists`,
@@ -462,13 +492,13 @@ export async function addTracksToPlaylist(accessToken, playlistId, uris) {
 
   for (let index = 0; index < normalizedUris.length; index += 100) {
     const chunk = normalizedUris.slice(index, index + 100);
+    const url = new URL(`${SPOTIFY_API_URL}/playlists/${playlistId}/items`);
 
-    await postSpotifyJson(
-      `${SPOTIFY_API_URL}/playlists/${playlistId}/tracks`,
+    url.searchParams.set("uris", chunk.join(","));
+
+    await postSpotifyWithoutJsonBody(
+      url.toString(),
       accessToken,
-      {
-        uris: chunk,
-      },
       "Failed to add tracks to the Spotify playlist."
     );
   }

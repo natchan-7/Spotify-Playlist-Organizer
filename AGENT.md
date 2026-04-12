@@ -295,7 +295,7 @@ Current and planned endpoints:
 - `GET /playlists/{id}/tracks`
 - `GET /artists?ids=...`
 - `POST /me/playlists`
-- `POST /playlists/{id}/tracks`
+- `POST /playlists/{id}/items`
 
 Rules:
 
