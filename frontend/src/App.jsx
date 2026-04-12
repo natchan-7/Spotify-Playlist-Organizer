@@ -54,6 +54,15 @@ function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
   return error.message || fallbackMessage;
 }
 
+function hasSpotifyScope(session, requiredScope) {
+  if (!requiredScope) {
+    return true;
+  }
+
+  const scopeValue = typeof session?.scope === "string" ? session.scope : "";
+  return scopeValue.split(/\s+/).includes(requiredScope);
+}
+
 function getMarketFromBrowser() {
   const runtimeLocale = Intl.DateTimeFormat().resolvedOptions().locale;
   const locales = [runtimeLocale, navigator.language, ...(navigator.languages || [])].filter(Boolean);
@@ -577,12 +586,23 @@ function App() {
     const normalizedTag = typeof userTag === "string" ? userTag.trim() : "";
     const normalizedPlaylistName =
       typeof playlistName === "string" ? playlistName.trim() : "";
+    const requiredScope = isPublic
+      ? "playlist-modify-public"
+      : "playlist-modify-private";
 
     if (!sourcePlaylist?.id || !normalizedTag || !normalizedPlaylistName) {
       return {
         ok: false,
         reason: "validation",
         message: "Playlist source, user tag, and playlist name are required.",
+      };
+    }
+
+    if (!hasSpotifyScope(session, requiredScope)) {
+      return {
+        ok: false,
+        reason: "scope",
+        message: `Current Spotify session is missing ${requiredScope}. Log out and log in again before creating this playlist.`,
       };
     }
 
@@ -637,7 +657,8 @@ function App() {
     } catch (error) {
       const message = getSpotifyApiErrorMessage(
         error,
-        "Failed to create the Spotify playlist from this user tag."
+        "Failed to create the Spotify playlist from this user tag.",
+        "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
       );
       setPlaylistCreationError(message);
       setPlaylistCreationStatus("error");

@@ -88,7 +88,9 @@ function PlaylistCreationPanel({
     });
 
     if (!result?.ok) {
-      setFormError(result?.message || "Playlist creation failed.");
+      if (result?.reason === "validation" || result?.reason === "scope") {
+        setFormError(result?.message || "Playlist creation failed.");
+      }
     }
   }
 
@@ -179,7 +181,7 @@ function PlaylistCreationPanel({
             </div>
           )}
 
-          {playlistCreationStatus === "error" && playlistCreationError && (
+          {playlistCreationStatus === "error" && playlistCreationError && !formError && (
             <div className="notice error">
               <p>{playlistCreationError}</p>
             </div>
