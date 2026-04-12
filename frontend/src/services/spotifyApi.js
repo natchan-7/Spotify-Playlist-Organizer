@@ -319,16 +319,8 @@ function splitArtistIdsByCache(artistIds, artistGenreCache) {
   };
 }
 
-async function fetchSingleArtistGenres(accessToken, artistId) {
-  const payload = await fetchSpotifyPage(
-    `${SPOTIFY_API_URL}/artists/${artistId}`,
-    accessToken,
-    "Failed to fetch Spotify artist genres."
-  );
-
-  return {
-    [artistId]: Array.isArray(payload.genres) ? payload.genres : [],
-  };
+function createEmptyArtistGenresMap(artistIds) {
+  return Object.fromEntries(artistIds.map((artistId) => [artistId, []]));
 }
 
 async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCache) {
@@ -360,54 +352,12 @@ async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCach
       saveArtistGenreCache(nextArtistGenreCache);
     } catch (error) {
       if (error instanceof Error && error.status === 403) {
-        const individualArtistGenresByArtistId =
-          await fetchArtistGenresIndividually(
-            accessToken,
-            chunk,
-            nextArtistGenreCache
-          );
+        const emptyArtistGenresByArtistId = createEmptyArtistGenresMap(chunk);
 
         Object.assign(
           artistGenresByArtistId,
-          individualArtistGenresByArtistId
+          emptyArtistGenresByArtistId
         );
-        nextArtistGenreCache = mergeArtistGenreCacheEntries(
-          nextArtistGenreCache,
-          individualArtistGenresByArtistId
-        );
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  return artistGenresByArtistId;
-}
-
-async function fetchArtistGenresIndividually(accessToken, artistIds, artistGenreCache) {
-  const artistGenresByArtistId = {};
-  let nextArtistGenreCache = { ...artistGenreCache };
-
-  for (const artistId of artistIds) {
-    try {
-      const singleArtistGenresByArtistId = await fetchSingleArtistGenres(
-        accessToken,
-        artistId
-      );
-      Object.assign(artistGenresByArtistId, singleArtistGenresByArtistId);
-      nextArtistGenreCache = mergeArtistGenreCacheEntries(
-        nextArtistGenreCache,
-        singleArtistGenresByArtistId
-      );
-      saveArtistGenreCache(nextArtistGenreCache);
-    } catch (error) {
-      if (error instanceof Error && error.status === 403) {
-        const emptyArtistGenresByArtistId = {
-          [artistId]: [],
-        };
-
-        Object.assign(artistGenresByArtistId, emptyArtistGenresByArtistId);
         nextArtistGenreCache = mergeArtistGenreCacheEntries(
           nextArtistGenreCache,
           emptyArtistGenresByArtistId

@@ -40,7 +40,7 @@ Step 6 and Step 7 notes:
 - Playlist items currently come back in the Spotify API `item` field, so the app reads `item` first and only falls back to deprecated `track`
 - Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
 - Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
-- Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, with a fallback to per-artist requests if the bulk endpoint is rejected
+- Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, and `403` artist chunks are cached as empty results instead of retrying per artist
 - Artist genre results are cached in `localStorage` for repeated playlist views so the app can reuse earlier lookups
 - Even if Spotify rate-limits a later artist lookup, already fetched artist genres stay cached for the next retry
 - Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten

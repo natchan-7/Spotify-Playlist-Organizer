@@ -338,7 +338,7 @@ For Step 4 and Step 5:
 - fetch artist genres from Spotify in batches of up to 50 IDs
 - cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
 - save artist genre cache incrementally so partial success is preserved even if a later request is rate-limited
-- if Spotify rejects the bulk artist endpoint, fall back to per-artist requests before failing Step 4
+- if Spotify rejects a bulk artist chunk with `403`, cache that chunk as empty genres instead of retrying per artist
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
 - persist newly generated auto tags during Step 5
