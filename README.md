@@ -45,6 +45,7 @@ Step 9 notes:
 - Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, and `403` artist chunks are cached as empty results instead of retrying per artist
 - Artist genre results are cached in `localStorage` for repeated playlist views so the app can reuse earlier lookups
 - Even if Spotify rate-limits a later artist lookup, already fetched artist genres stay cached for the next retry
+- When Spotify returns no usable genres, automatic tags fall back to normalized artist names so the UI still has a useful starting point
 - Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten
 - The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
 - User tags are added per track, duplicates are prevented, and removals update browser storage immediately

@@ -343,6 +343,7 @@ For Step 4 and Step 5:
 - cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
 - save artist genre cache incrementally so partial success is preserved even if a later request is rate-limited
 - if Spotify rejects a bulk artist chunk with `403`, cache that chunk as empty genres instead of retrying per artist
+- if Spotify returns no usable genres for a track, generate fallback auto tags from normalized artist names
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
 - persist newly generated auto tags during Step 5
