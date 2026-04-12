@@ -171,7 +171,7 @@ function PlaylistCreationPanel({
 
   function updateSelectedTagValue(nextTag) {
     setSelectedTagValue(nextTag);
-    setTagSearchQuery("");
+    setTagSearchQuery(nextTag);
     setIsTagMenuOpen(false);
     setFormError("");
     onResetPlaylistCreationState?.();
