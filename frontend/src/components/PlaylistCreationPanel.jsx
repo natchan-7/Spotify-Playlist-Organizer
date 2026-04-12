@@ -299,7 +299,7 @@ function PlaylistCreationPanel({
               {isTagMenuOpen && (
                 <div className="tag-search-results">
                   {filteredTagOptions.length > 0 ? (
-                    filteredTagOptions.slice(0, 8).map((tag) => (
+                    filteredTagOptions.map((tag) => (
                       <button
                         key={tag}
                         className={`tag-search-option${
