@@ -12,6 +12,7 @@ function buildDefaultPlaylistName(selectedPlaylist, selectedTag) {
 function PlaylistCreationPanel({
   createdPlaylist,
   onCreatePlaylistFromUserTag,
+  onResetPlaylistCreationState,
   playlistCreationError,
   playlistCreationStatus,
   selectedPlaylist,
@@ -22,6 +23,7 @@ function PlaylistCreationPanel({
   const [playlistName, setPlaylistName] = useState("");
   const [visibility, setVisibility] = useState("private");
   const [formError, setFormError] = useState("");
+  const [isPlaylistNameDirty, setIsPlaylistNameDirty] = useState(false);
 
   const availableUserTags = useMemo(
     () =>
@@ -52,18 +54,34 @@ function PlaylistCreationPanel({
     setPlaylistName("");
     setVisibility("private");
     setFormError("");
+    setIsPlaylistNameDirty(false);
   }, [selectedPlaylist?.id]);
 
   useEffect(() => {
-    if (!selectedUserTag) {
-      setPlaylistName("");
+    if (availableUserTags.length === 0) {
+      setSelectedUserTag("");
       return;
     }
 
-    setPlaylistName((currentName) =>
-      currentName ? currentName : buildDefaultPlaylistName(selectedPlaylist, selectedUserTag)
+    setSelectedUserTag((currentTag) =>
+      currentTag && availableUserTags.includes(currentTag)
+        ? currentTag
+        : availableUserTags[0]
     );
-  }, [selectedPlaylist, selectedUserTag]);
+  }, [availableUserTags]);
+
+  useEffect(() => {
+    if (!selectedUserTag) {
+      if (!isPlaylistNameDirty) {
+        setPlaylistName("");
+      }
+      return;
+    }
+
+    if (!isPlaylistNameDirty) {
+      setPlaylistName(buildDefaultPlaylistName(selectedPlaylist, selectedUserTag));
+    }
+  }, [isPlaylistNameDirty, selectedPlaylist, selectedUserTag]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -94,6 +112,25 @@ function PlaylistCreationPanel({
     }
   }
 
+  function updateSelectedUserTag(nextTag) {
+    setSelectedUserTag(nextTag);
+    setFormError("");
+    onResetPlaylistCreationState?.();
+  }
+
+  function updatePlaylistName(nextPlaylistName) {
+    setPlaylistName(nextPlaylistName);
+    setIsPlaylistNameDirty(true);
+    setFormError("");
+    onResetPlaylistCreationState?.();
+  }
+
+  function updateVisibility(nextVisibility) {
+    setVisibility(nextVisibility);
+    setFormError("");
+    onResetPlaylistCreationState?.();
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -106,6 +143,11 @@ function PlaylistCreationPanel({
             </p>
           )}
         </div>
+        {selectedPlaylist && tracksStatus === "success" && (
+          <span className="playlist-count">
+            {availableUserTags.length} user tags
+          </span>
+        )}
       </div>
 
       {!selectedPlaylist && (
@@ -133,7 +175,7 @@ function PlaylistCreationPanel({
             <select
               className="playlist-create-select"
               value={selectedUserTag}
-              onChange={(event) => setSelectedUserTag(event.target.value)}
+              onChange={(event) => updateSelectedUserTag(event.target.value)}
             >
               <option value="">Select a user tag</option>
               {availableUserTags.map((tag) => (
@@ -150,7 +192,7 @@ function PlaylistCreationPanel({
               className="playlist-create-input"
               type="text"
               value={playlistName}
-              onChange={(event) => setPlaylistName(event.target.value)}
+              onChange={(event) => updatePlaylistName(event.target.value)}
               placeholder="New Spotify playlist name"
             />
           </label>
@@ -160,7 +202,7 @@ function PlaylistCreationPanel({
             <select
               className="playlist-create-select"
               value={visibility}
-              onChange={(event) => setVisibility(event.target.value)}
+              onChange={(event) => updateVisibility(event.target.value)}
             >
               <option value="private">Private</option>
               <option value="public">Public</option>
@@ -168,10 +210,19 @@ function PlaylistCreationPanel({
           </label>
 
           {selectedUserTag && (
-            <div className="notice">
-              <p>
-                {matchedTracks.length} tracks currently match the user tag "{selectedUserTag}".
-              </p>
+            <div className="creation-summary-grid">
+              <div className="creation-summary-card">
+                <span className="creation-summary-label">Matching tracks</span>
+                <strong>{matchedTracks.length}</strong>
+              </div>
+              <div className="creation-summary-card">
+                <span className="creation-summary-label">Selected tag</span>
+                <strong>{selectedUserTag}</strong>
+              </div>
+              <div className="creation-summary-card">
+                <span className="creation-summary-label">Visibility</span>
+                <strong>{visibility}</strong>
+              </div>
             </div>
           )}
 
@@ -188,12 +239,12 @@ function PlaylistCreationPanel({
           )}
 
           {playlistCreationStatus === "success" && createdPlaylist && (
-            <div className="notice">
+            <div className="notice success-notice">
               <p>
                 Created "{createdPlaylist.name}" from the user tag "{createdPlaylist.userTag}".
               </p>
               <p>
-                Added {createdPlaylist.addedTrackCount} tracks
+                Added {createdPlaylist.addedTrackCount} tracks from {selectedPlaylist?.name}
                 {createdPlaylist.spotifyUrl ? (
                   <>
                     .{" "}

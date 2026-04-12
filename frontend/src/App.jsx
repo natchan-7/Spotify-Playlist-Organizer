@@ -650,7 +650,7 @@ function App() {
       const message = getSpotifyApiErrorMessage(
         error,
         "Failed to create the Spotify playlist from this user tag.",
-        "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
+      "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
       );
       setPlaylistCreationError(message);
       setPlaylistCreationStatus("error");
@@ -662,6 +662,12 @@ function App() {
         message,
       };
     }
+  }
+
+  function handleResetPlaylistCreationState() {
+    setPlaylistCreationStatus("idle");
+    setPlaylistCreationError("");
+    setCreatedPlaylist(null);
   }
 
   return (
@@ -691,6 +697,7 @@ function App() {
       playlistCreationError={playlistCreationError}
       createdPlaylist={createdPlaylist}
       onCreatePlaylistFromUserTag={handleCreatePlaylistFromUserTag}
+      onResetPlaylistCreationState={handleResetPlaylistCreationState}
       onAddUserTag={handleAddUserTag}
       onRemoveUserTag={handleRemoveUserTag}
       onSelectPlaylist={handleSelectPlaylist}

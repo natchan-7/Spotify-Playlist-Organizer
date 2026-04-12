@@ -50,7 +50,7 @@ Already implemented in `frontend/`:
 - combined auto-tag and user-tag display in track rows
 - playlist creation flow for tracks filtered by a selected user tag
 
-The next implementation target is polish, validation, and UX refinement around Step 8.
+The core implementation is complete. Further work is optional polish only.
 
 ---
 

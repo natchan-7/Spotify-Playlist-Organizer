@@ -34,7 +34,7 @@ Notes:
 - if it is not set, the app uses the current site URL automatically
 - for Cloudflare Pages, leaving it unset is the simplest option
 
-Next target: polish and validation around the Step 8 playlist-creation flow.
+Next target: optional polish only. The end-to-end flow is implemented.
 
 Step 8 notes:
 
@@ -50,6 +50,7 @@ Step 8 notes:
 - User tags are intentionally stored separately from `auto` tags under the same `trackTags` entry
 - New playlists are created from the currently selected playlist's user tags, then matching track URIs are added in batches of up to 100 through Spotify's playlist items endpoint
 - Playlist creation uses Spotify's current `POST /me/playlists` endpoint rather than the deprecated user-id variant
+- The Step 8 panel now auto-selects available user tags, clears stale creation messages when inputs change, and surfaces success details more clearly
 
 ## Cloudflare
 

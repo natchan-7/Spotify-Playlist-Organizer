@@ -35,6 +35,7 @@ function AuthPage(props) {
         <PlaylistCreationPanel
           createdPlaylist={props.createdPlaylist}
           onCreatePlaylistFromUserTag={props.onCreatePlaylistFromUserTag}
+          onResetPlaylistCreationState={props.onResetPlaylistCreationState}
           playlistCreationError={props.playlistCreationError}
           playlistCreationStatus={props.playlistCreationStatus}
           selectedPlaylist={props.selectedPlaylist}
