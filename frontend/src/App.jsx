@@ -693,7 +693,7 @@ function App() {
       const message = getSpotifyApiErrorMessage(
         error,
         "Failed to create the Spotify playlist from this user tag.",
-      "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
+        "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
       );
       setPlaylistCreationError(message);
       setPlaylistCreationStatus("error");
@@ -715,6 +715,8 @@ function App() {
 
   function handleClearArtistGenreCache() {
     clearStoredArtistGenreCache();
+    setGenreStatus("idle");
+    setGenreError("");
     setBrowserDataNotice(
       "Cleared cached artist genres. The next playlist view can fetch fresh genre data."
     );
@@ -723,6 +725,12 @@ function App() {
   function handleClearStoredTrackTags() {
     clearStoredTrackTags();
     setTracks(mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId, {}));
+    setTagStorageStatus("idle");
+    setTagStorageError("");
+    setTagStorageSummary(null);
+    setPlaylistCreationStatus("idle");
+    setPlaylistCreationError("");
+    setCreatedPlaylist(null);
     setBrowserDataNotice(
       "Cleared saved track tags in this browser. User tags were removed from local storage."
     );
