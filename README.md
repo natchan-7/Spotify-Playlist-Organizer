@@ -15,6 +15,7 @@ Current status: Step 6 and Step 7 are implemented.
 - Persist newly generated automatic tags in `localStorage`
 - Add and remove per-track user tags with immediate `localStorage` updates
 - Display automatic tags and user tags together in each track row
+- Cache artist genre lookups in `localStorage` to reduce Spotify rate-limit errors
 
 Setup:
 
@@ -40,6 +41,7 @@ Step 6 and Step 7 notes:
 - Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
 - Some followed playlists may be visible in the list but still reject track-item access unless the user owns or collaborates on them
 - Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, with a fallback to per-artist requests if the bulk endpoint is rejected
+- Artist genre results are cached in `localStorage` for repeated playlist views so the app can reuse earlier lookups
 - Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten
 - The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
 - User tags are added per track, duplicates are prevented, and removals update browser storage immediately

@@ -42,6 +42,7 @@ Already implemented in `frontend/`:
 - on-demand playlist track fetch with pagination
 - market-aware playlist track requests
 - artist genre fetch in 50-ID batches
+- artist genre cache in localStorage for repeated lookups
 - in-memory auto-tag preparation that preserves stored `trackTags.auto`
 - localStorage persistence for newly generated automatic tags only
 - per-track user tag add/remove with duplicate prevention
@@ -335,6 +336,7 @@ For Step 4 and Step 5:
 
 - derive artist IDs from the normalized track objects
 - fetch artist genres from Spotify in batches of up to 50 IDs
+- cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
 - if Spotify rejects the bulk artist endpoint, fall back to per-artist requests before failing Step 4
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored

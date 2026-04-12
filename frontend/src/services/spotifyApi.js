@@ -1,3 +1,8 @@
+import {
+  getStoredArtistGenreCache,
+  saveArtistGenreCache,
+} from "../utils/storage";
+
 const SPOTIFY_API_URL = "https://api.spotify.com/v1";
 
 function createAuthorizedHeaders(accessToken) {
@@ -274,6 +279,39 @@ function createArtistGenresMap(artists) {
   );
 }
 
+function createArtistGenreCacheEntries(artistGenresByArtistId, cachedAt = Date.now()) {
+  return Object.fromEntries(
+    Object.entries(artistGenresByArtistId).map(([artistId, genres]) => [
+      artistId,
+      {
+        genres: Array.isArray(genres) ? genres : [],
+        cachedAt,
+      },
+    ])
+  );
+}
+
+function splitArtistIdsByCache(artistIds, artistGenreCache) {
+  const cachedArtistGenresByArtistId = {};
+  const missingArtistIds = [];
+
+  artistIds.forEach((artistId) => {
+    const cachedEntry = artistGenreCache?.[artistId];
+
+    if (cachedEntry && Array.isArray(cachedEntry.genres)) {
+      cachedArtistGenresByArtistId[artistId] = cachedEntry.genres;
+      return;
+    }
+
+    missingArtistIds.push(artistId);
+  });
+
+  return {
+    cachedArtistGenresByArtistId,
+    missingArtistIds,
+  };
+}
+
 async function fetchSingleArtistGenres(accessToken, artistId) {
   const payload = await fetchSpotifyPage(
     `${SPOTIFY_API_URL}/artists/${artistId}`,
@@ -353,5 +391,29 @@ export async function fetchArtistGenres(accessToken, artistIds) {
     return {};
   }
 
-  return fetchArtistGenresInChunks(accessToken, normalizedArtistIds);
+  const artistGenreCache = getStoredArtistGenreCache();
+  const { cachedArtistGenresByArtistId, missingArtistIds } = splitArtistIdsByCache(
+    normalizedArtistIds,
+    artistGenreCache
+  );
+
+  if (missingArtistIds.length === 0) {
+    return cachedArtistGenresByArtistId;
+  }
+
+  const fetchedArtistGenresByArtistId = await fetchArtistGenresInChunks(
+    accessToken,
+    missingArtistIds
+  );
+  const nextArtistGenreCache = {
+    ...artistGenreCache,
+    ...createArtistGenreCacheEntries(fetchedArtistGenresByArtistId),
+  };
+
+  saveArtistGenreCache(nextArtistGenreCache);
+
+  return {
+    ...cachedArtistGenresByArtistId,
+    ...fetchedArtistGenresByArtistId,
+  };
 }
