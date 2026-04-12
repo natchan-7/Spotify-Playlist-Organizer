@@ -73,3 +73,7 @@ export function getStoredArtistGenreCache() {
 export function saveArtistGenreCache(cache) {
   localStorage.setItem(ARTIST_GENRE_CACHE_KEY, JSON.stringify(cache));
 }
+
+export function clearStoredArtistGenreCache() {
+  localStorage.removeItem(ARTIST_GENRE_CACHE_KEY);
+}

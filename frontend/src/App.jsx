@@ -17,7 +17,12 @@ import {
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
 import {
+  clearStoredArtistGenreCache,
+  getStoredArtistGenreCache,
+} from "./utils/storage";
+import {
   addUserTagToTrack,
+  clearStoredTrackTags,
   getStoredTrackTagsMap,
   mergeAutoTagsIntoTracks,
   mergeTrackTagsIntoTracks,
@@ -61,6 +66,25 @@ function hasSpotifyScope(session, requiredScope) {
 
   const scopeValue = typeof session?.scope === "string" ? session.scope : "";
   return scopeValue.split(/\s+/).includes(requiredScope);
+}
+
+function createBrowserDataSummary() {
+  const artistGenreCache = getStoredArtistGenreCache();
+  const trackTagsMap = getStoredTrackTagsMap();
+  const trackTagEntries = Object.values(trackTagsMap).filter(
+    (entry) => entry && typeof entry === "object"
+  );
+
+  return {
+    artistGenreCacheCount: Object.keys(artistGenreCache).length,
+    trackTagEntryCount: Object.keys(trackTagsMap).length,
+    autoTagEntryCount: trackTagEntries.filter(
+      (entry) => Array.isArray(entry.auto) && entry.auto.length > 0
+    ).length,
+    userTagEntryCount: trackTagEntries.filter(
+      (entry) => Array.isArray(entry.user) && entry.user.length > 0
+    ).length,
+  };
 }
 
 function getMarketFromBrowser() {
@@ -112,10 +136,13 @@ function App() {
   const [playlistCreationStatus, setPlaylistCreationStatus] = useState("idle");
   const [playlistCreationError, setPlaylistCreationError] = useState("");
   const [createdPlaylist, setCreatedPlaylist] = useState(null);
+  const [artistGenresByArtistId, setArtistGenresByArtistId] = useState({});
+  const [browserDataNotice, setBrowserDataNotice] = useState("");
   const redirectUri = getSpotifyRedirectUri();
 
   const selectedPlaylist =
     playlists.find((playlist) => playlist.id === selectedPlaylistId) || null;
+  const browserDataSummary = createBrowserDataSummary();
 
   useEffect(() => {
     if (!hasAuthCallbackParams()) {
@@ -175,6 +202,8 @@ function App() {
     setPlaylistCreationStatus("idle");
     setPlaylistCreationError("");
     setCreatedPlaylist(null);
+    setArtistGenresByArtistId({});
+    setBrowserDataNotice("");
   }
 
   async function handleLogin() {
@@ -211,6 +240,8 @@ function App() {
       setPlaylistCreationStatus("idle");
       setPlaylistCreationError("");
       setCreatedPlaylist(null);
+      setArtistGenresByArtistId({});
+      setBrowserDataNotice("");
       return;
     }
 
@@ -292,6 +323,8 @@ function App() {
       setPlaylistCreationStatus("idle");
       setPlaylistCreationError("");
       setCreatedPlaylist(null);
+      setArtistGenresByArtistId({});
+      setBrowserDataNotice("");
       return;
     }
 
@@ -308,6 +341,8 @@ function App() {
       setPlaylistCreationStatus("idle");
       setPlaylistCreationError("");
       setCreatedPlaylist(null);
+      setArtistGenresByArtistId({});
+      setBrowserDataNotice("");
 
       try {
         const nextTracks = await fetchPlaylistTracks(
@@ -340,6 +375,8 @@ function App() {
           setPlaylistCreationStatus("idle");
           setPlaylistCreationError("");
           setCreatedPlaylist(null);
+          setArtistGenresByArtistId({});
+          setBrowserDataNotice("");
         }
       }
     }
@@ -364,6 +401,7 @@ function App() {
     if (rawTracks.length === 0) {
       setGenreStatus("success");
       setGenreError("");
+      setArtistGenresByArtistId({});
       setTagStorageStatus("success");
       setTagStorageError("");
       setTagStorageSummary({
@@ -390,6 +428,7 @@ function App() {
       setTracks(mergeAutoTagsIntoTracks(rawTracks, {}, storedTrackTagsMap));
       setGenreStatus("success");
       setGenreError("");
+      setArtistGenresByArtistId({});
       setTagStorageStatus("success");
       setTagStorageError("");
       setTagStorageSummary({
@@ -414,6 +453,7 @@ function App() {
 
         if (!ignore) {
           let nextTrackTagsMap = getStoredTrackTagsMap();
+          setArtistGenresByArtistId(artistGenresByArtistId);
 
           try {
             const persistenceResult = persistGeneratedAutoTags(
@@ -447,6 +487,7 @@ function App() {
         }
       } catch (error) {
         if (!ignore) {
+          setArtistGenresByArtistId({});
           const message = getSpotifyApiErrorMessage(
             error,
             "Failed to fetch Spotify artist genres.",
@@ -503,6 +544,7 @@ function App() {
             : track
         )
       );
+      setBrowserDataNotice(`Saved the user tag "${userTag.trim()}" in this browser.`);
 
       return result;
     } catch (error) {
@@ -547,6 +589,7 @@ function App() {
             : track
         )
       );
+      setBrowserDataNotice(`Removed the user tag "${userTag}" from this browser.`);
 
       return result;
     } catch (error) {
@@ -670,6 +713,21 @@ function App() {
     setCreatedPlaylist(null);
   }
 
+  function handleClearArtistGenreCache() {
+    clearStoredArtistGenreCache();
+    setBrowserDataNotice(
+      "Cleared cached artist genres. The next playlist view can fetch fresh genre data."
+    );
+  }
+
+  function handleClearStoredTrackTags() {
+    clearStoredTrackTags();
+    setTracks(mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId, {}));
+    setBrowserDataNotice(
+      "Cleared saved track tags in this browser. User tags were removed from local storage."
+    );
+  }
+
   return (
     <AuthPage
       authStatus={authStatus}
@@ -696,6 +754,10 @@ function App() {
       playlistCreationStatus={playlistCreationStatus}
       playlistCreationError={playlistCreationError}
       createdPlaylist={createdPlaylist}
+      browserDataSummary={browserDataSummary}
+      browserDataNotice={browserDataNotice}
+      onClearArtistGenreCache={handleClearArtistGenreCache}
+      onClearStoredTrackTags={handleClearStoredTrackTags}
       onCreatePlaylistFromUserTag={handleCreatePlaylistFromUserTag}
       onResetPlaylistCreationState={handleResetPlaylistCreationState}
       onAddUserTag={handleAddUserTag}

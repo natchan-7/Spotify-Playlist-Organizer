@@ -2,7 +2,7 @@
 
 This project is being implemented step by step following the strict order in `AGENT.md`.
 
-Current status: Step 8 is implemented.
+Current status: Step 9 is implemented.
 
 - Created a React + Vite app in `frontend/`
 - Implemented Spotify OAuth login with PKCE
@@ -17,6 +17,7 @@ Current status: Step 8 is implemented.
 - Display automatic tags and user tags together in each track row
 - Cache artist genre lookups in `localStorage` to reduce Spotify rate-limit errors
 - Create a new Spotify playlist from tracks filtered by a selected user tag
+- Review and clear cached browser data for artist genres and saved tags
 
 Setup:
 
@@ -34,9 +35,9 @@ Notes:
 - if it is not set, the app uses the current site URL automatically
 - for Cloudflare Pages, leaving it unset is the simplest option
 
-Next target: optional polish only. The end-to-end flow is implemented.
+Next target: optional polish only. The end-to-end flow and browser-data controls are implemented.
 
-Step 8 notes:
+Step 9 notes:
 
 - Playlist items currently come back in the Spotify API `item` field, so the app reads `item` first and only falls back to deprecated `track`
 - Playlist tracks are fetched with a user market so Spotify returns playable metadata more reliably
@@ -51,6 +52,7 @@ Step 8 notes:
 - New playlists are created from the currently selected playlist's user tags, then matching track URIs are added in batches of up to 100 through Spotify's playlist items endpoint
 - Playlist creation uses Spotify's current `POST /me/playlists` endpoint rather than the deprecated user-id variant
 - The Step 8 panel now auto-selects available user tags, clears stale creation messages when inputs change, and surfaces success details more clearly
+- The Step 9 panel exposes browser-side cache counts and lets the user clear artist genre cache or saved track tags without leaving the app
 
 ## Cloudflare
 
