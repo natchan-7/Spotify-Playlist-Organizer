@@ -74,7 +74,7 @@ function normalizePlaylist(playlist) {
     description: playlist.description || "",
     imageUrl: playlist.images?.[0]?.url || "",
     ownerId: playlist.owner?.id || "",
-    ownerName: playlist.owner?.display_name || playlist.owner?.id || "Unknown",
+    ownerName: playlist.owner?.display_name || playlist.owner?.id || "不明",
     totalTracks: Number.isFinite(normalizedTotalTracks)
       ? normalizedTotalTracks
       : 0,
@@ -97,12 +97,12 @@ async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
       payload?.error?.message ||
       payload?.message ||
       fallbackMessage ||
-      "Failed to fetch Spotify playlists.";
+      "Spotify の情報を取得できませんでした。";
 
     if (response.status === 429) {
       message = retryAfter
-        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
-        : "Spotify rate limit reached. Wait a moment and try again.";
+        ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
+        : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
     }
 
     const error = new Error(message);
@@ -144,7 +144,7 @@ export async function fetchCurrentUserPlaylists(accessToken) {
     const payload = await fetchSpotifyPage(
       nextUrl,
       accessToken,
-      "Failed to fetch Spotify playlists."
+      "Spotify のプレイリストを取得できませんでした。"
     );
     playlists.push(...(payload.items || []).map(normalizePlaylist));
     nextUrl = payload.next;
@@ -170,12 +170,12 @@ export async function fetchCurrentUserProfile(accessToken) {
   const payload = await fetchSpotifyPage(
     `${SPOTIFY_API_URL}/me`,
     accessToken,
-    "Failed to fetch the current Spotify user profile."
+    "Spotify のユーザー情報を取得できませんでした。"
   );
 
   return {
     id: payload.id || "",
-    displayName: payload.display_name || payload.id || "Unknown",
+    displayName: payload.display_name || payload.id || "不明",
     country: payload.country || "",
   };
 }
@@ -257,7 +257,7 @@ export async function fetchPlaylistTracks(accessToken, playlist, market) {
     const payload = await fetchSpotifyPage(
       url.toString(),
       accessToken,
-      "Failed to fetch Spotify playlist tracks."
+      "プレイリストの楽曲を取得できませんでした。"
     );
 
     const normalized = (payload.items || [])
@@ -337,7 +337,7 @@ async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCach
       const payload = await fetchSpotifyPage(
         url.toString(),
         accessToken,
-        "Failed to fetch Spotify artist genres."
+        "アーティスト情報を取得できませんでした。"
       );
       const chunkArtistGenresByArtistId = createArtistGenresMap(payload.artists || []);
 
@@ -421,12 +421,12 @@ async function postSpotifyJson(url, accessToken, body, fallbackMessage) {
       payload?.error?.message ||
       payload?.message ||
       fallbackMessage ||
-      "Spotify request failed.";
+      "Spotify へのリクエストに失敗しました。";
 
     if (response.status === 429) {
       message = retryAfter
-        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
-        : "Spotify rate limit reached. Wait a moment and try again.";
+        ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
+        : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
     }
 
     const error = new Error(message);
@@ -451,12 +451,12 @@ async function postSpotifyWithoutJsonBody(url, accessToken, fallbackMessage) {
       payload?.error?.message ||
       payload?.message ||
       fallbackMessage ||
-      "Spotify request failed.";
+      "Spotify へのリクエストに失敗しました。";
 
     if (response.status === 429) {
       message = retryAfter
-        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
-        : "Spotify rate limit reached. Wait a moment and try again.";
+        ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
+        : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
     }
 
     const error = new Error(message);
@@ -477,7 +477,7 @@ export async function createPlaylist(accessToken, details) {
       description: details.description || "",
       public: Boolean(details.isPublic),
     },
-    "Failed to create the Spotify playlist."
+    "Spotify プレイリストを作成できませんでした。"
   );
 
   return {
@@ -499,7 +499,7 @@ export async function addTracksToPlaylist(accessToken, playlistId, uris) {
     await postSpotifyWithoutJsonBody(
       url.toString(),
       accessToken,
-      "Failed to add tracks to the Spotify playlist."
+      "Spotify プレイリストに楽曲を追加できませんでした。"
     );
   }
 }

@@ -38,22 +38,22 @@ function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
   const status = error.status;
 
   if (status === 401) {
-    return "Spotify session expired. Please log in again.";
+    return "Spotify のログイン期限が切れました。もう一度ログインしてください。";
   }
 
   if (status === 403) {
     return (
       forbiddenMessage ||
-      "Spotify returned Forbidden. Log out and log in again, then confirm your Spotify app user access."
+      "Spotify からアクセスを拒否されました。ログアウトして再ログインし、Spotify アプリ設定のアクセス権も確認してください。"
     );
   }
 
   if (status === 429) {
     if (typeof error.retryAfter === "number" && Number.isFinite(error.retryAfter)) {
-      return `Spotify rate limit reached. Wait about ${error.retryAfter} seconds and try again.`;
+      return `Spotify のアクセス上限に達しました。約 ${error.retryAfter} 秒待ってからもう一度試してください。`;
     }
 
-    return "Spotify rate limit reached. Wait a moment and try again.";
+    return "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
   }
 
   return error.message || fallbackMessage;
@@ -165,7 +165,7 @@ function App() {
       } catch (error) {
         if (!ignore) {
           const message =
-            error instanceof Error ? error.message : "Spotify login failed.";
+            error instanceof Error ? error.message : "Spotify へのログインに失敗しました。";
           setErrorMessage(message);
           setAuthStatus("error");
         }
@@ -214,7 +214,7 @@ function App() {
       await beginSpotifyLogin();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Spotify login failed.";
+        error instanceof Error ? error.message : "Spotify へのログインに失敗しました。";
       setErrorMessage(message);
       setAuthStatus("error");
     }
@@ -277,7 +277,7 @@ function App() {
         if (!ignore) {
           const message = getSpotifyApiErrorMessage(
             error,
-            "Failed to fetch Spotify playlists."
+            "Spotify のプレイリストを取得できませんでした。"
           );
           setPlaylists([]);
           setPlaylistsError(message);
@@ -361,8 +361,8 @@ function App() {
           setRawTracks([]);
           const message = getSpotifyApiErrorMessage(
             error,
-            "Failed to fetch Spotify playlist tracks.",
-            "Spotify returned Forbidden. Spotify only returns playlist items for playlists you own or collaborate on."
+            "プレイリストの楽曲を取得できませんでした。",
+            "Spotify では、自分が所有しているか共同編集しているプレイリストのみ楽曲を取得できます。"
           );
           setTracks([]);
           setTracksError(message);
@@ -474,7 +474,7 @@ function App() {
             const message =
               error instanceof Error
                 ? error.message
-                : "Failed to save automatic tags in browser storage.";
+                : "自動タグをブラウザに保存できませんでした。";
             setTagStorageStatus("error");
             setTagStorageError(message);
             setTagStorageSummary(null);
@@ -490,8 +490,8 @@ function App() {
           setArtistGenresByArtistId({});
           const message = getSpotifyApiErrorMessage(
             error,
-            "Failed to fetch Spotify artist genres.",
-            "Spotify returned Forbidden while fetching artist genres. This app can still show tracks, but Spotify is rejecting artist metadata for the current session or app settings."
+            "アーティスト情報を取得できませんでした。",
+            "アーティスト情報の取得を Spotify に拒否されました。楽曲表示はできますが、現在のセッションまたはアプリ設定では追加情報を取得できません。"
           );
           setTracks(mergeTrackTagsIntoTracks(rawTracks));
           setGenreError(message);
@@ -544,7 +544,7 @@ function App() {
             : track
         )
       );
-      setBrowserDataNotice(`Saved the user tag "${userTag.trim()}" in this browser.`);
+      setBrowserDataNotice(`手動タグ「${userTag.trim()}」をこのブラウザに保存しました。`);
 
       return result;
     } catch (error) {
@@ -554,7 +554,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Failed to save the user tag in browser storage.",
+            : "手動タグをブラウザに保存できませんでした。",
       };
     }
   }
@@ -589,7 +589,7 @@ function App() {
             : track
         )
       );
-      setBrowserDataNotice(`Removed the user tag "${userTag}" from this browser.`);
+      setBrowserDataNotice(`手動タグ「${userTag}」をこのブラウザから削除しました。`);
 
       return result;
     } catch (error) {
@@ -599,7 +599,7 @@ function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Failed to update browser storage for this tag.",
+            : "このタグのブラウザ保存データを更新できませんでした。",
       };
     }
   }
@@ -615,7 +615,7 @@ function App() {
       return {
         ok: false,
         reason: "auth",
-        message: "Spotify session expired. Please log in again.",
+        message: "Spotify のログイン期限が切れました。もう一度ログインしてください。",
       };
     }
 
@@ -631,7 +631,7 @@ function App() {
       return {
         ok: false,
         reason: "validation",
-        message: "Playlist source, tag selection, and playlist name are required.",
+        message: "元のプレイリスト、タグ、プレイリスト名はすべて入力が必要です。",
       };
     }
 
@@ -639,7 +639,7 @@ function App() {
       return {
         ok: false,
         reason: "scope",
-        message: `Current Spotify session is missing ${requiredScope}. Log out and log in again before creating this playlist.`,
+        message: `現在の Spotify セッションには ${requiredScope} 権限がありません。ログアウトして再ログインしてから作成してください。`,
       };
     }
 
@@ -656,7 +656,7 @@ function App() {
       return {
         ok: false,
         reason: "empty",
-        message: "No Spotify track URIs matched this tag yet.",
+        message: "このタグに一致する Spotify 楽曲がまだありません。",
       };
     }
 
@@ -667,7 +667,7 @@ function App() {
     try {
       const nextPlaylist = await createPlaylist(session.accessToken, {
         name: normalizedPlaylistName,
-        description: `Created from "${sourcePlaylist.name}" using the ${normalizedTagType} tag "${normalizedTag}".`,
+        description: `「${sourcePlaylist.name}」から ${normalizedTagType === "auto" ? "自動" : "手動"}タグ「${normalizedTag}」で作成`,
         isPublic,
       });
 
@@ -682,7 +682,7 @@ function App() {
         matchedTrackCount: matchingTracks.length,
         addedTrackCount: matchingUris.length,
         tagType: normalizedTagType,
-        tagTypeLabel: normalizedTagType === "auto" ? "automatic" : "user",
+        tagTypeLabel: normalizedTagType === "auto" ? "自動" : "手動",
         tagValue: normalizedTag,
       };
 
@@ -696,8 +696,8 @@ function App() {
     } catch (error) {
       const message = getSpotifyApiErrorMessage(
         error,
-        "Failed to create the Spotify playlist from this tag.",
-        "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
+        "このタグから Spotify プレイリストを作成できませんでした。",
+        "プレイリスト作成を Spotify に拒否されました。ログアウトして再ログインし、Spotify アプリ設定でこのアカウントが許可されているか確認してください。"
       );
       setPlaylistCreationError(message);
       setPlaylistCreationStatus("error");
@@ -722,7 +722,7 @@ function App() {
     setGenreStatus("idle");
     setGenreError("");
     setBrowserDataNotice(
-      "Cleared cached artist genres. The next playlist view can fetch fresh genre data."
+      "アーティスト情報キャッシュを削除しました。次にプレイリストを開くと最新情報を取得します。"
     );
   }
 
@@ -736,7 +736,7 @@ function App() {
     setPlaylistCreationError("");
     setCreatedPlaylist(null);
     setBrowserDataNotice(
-      "Cleared saved track tags in this browser. User tags were removed from local storage."
+      "このブラウザに保存されていたタグを削除しました。手動タグもローカル保存から消去されました。"
     );
   }
 

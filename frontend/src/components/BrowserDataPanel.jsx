@@ -11,17 +11,17 @@ function BrowserDataPanel({
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Step 9 / Browser Data</p>
-          <h2>Manage cached browser data</h2>
+          <p className="eyebrow">ブラウザデータ</p>
+          <h2>保存データの管理</h2>
           <p className="panel-subtitle">
-            Review what this browser has stored for tags and artist genre lookups.
+            このブラウザに保存されているタグやアーティスト情報を確認できます。
           </p>
         </div>
       </div>
 
       {!isAuthenticated && (
         <div className="notice">
-          <p>Log in before managing this app's saved Spotify data.</p>
+          <p>ログインすると、このアプリの保存データを確認できます。</p>
         </div>
       )}
 
@@ -29,19 +29,19 @@ function BrowserDataPanel({
         <>
           <div className="creation-summary-grid">
             <div className="creation-summary-card">
-              <span className="creation-summary-label">Artist genre cache</span>
+              <span className="creation-summary-label">アーティスト情報キャッシュ</span>
               <strong>{browserDataSummary.artistGenreCacheCount}</strong>
             </div>
             <div className="creation-summary-card">
-              <span className="creation-summary-label">Saved track entries</span>
+              <span className="creation-summary-label">保存済み楽曲データ</span>
               <strong>{browserDataSummary.trackTagEntryCount}</strong>
             </div>
             <div className="creation-summary-card">
-              <span className="creation-summary-label">Auto-tag entries</span>
+              <span className="creation-summary-label">自動タグ付き楽曲</span>
               <strong>{browserDataSummary.autoTagEntryCount}</strong>
             </div>
             <div className="creation-summary-card">
-              <span className="creation-summary-label">User-tag entries</span>
+              <span className="creation-summary-label">手動タグ付き楽曲</span>
               <strong>{browserDataSummary.userTagEntryCount}</strong>
             </div>
           </div>
@@ -58,14 +58,14 @@ function BrowserDataPanel({
               type="button"
               onClick={onClearArtistGenreCache}
             >
-              Clear genre cache
+              アーティスト情報キャッシュを削除
             </button>
             <button
               className="secondary-button"
               type="button"
               onClick={onClearStoredTrackTags}
             >
-              Clear saved tags
+              保存済みタグを削除
             </button>
           </div>
         </>

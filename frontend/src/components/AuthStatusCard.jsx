@@ -2,10 +2,10 @@ import React from "react";
 
 function formatExpiry(expiresAt) {
   if (!expiresAt) {
-    return "Unknown";
+    return "不明";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ja-JP", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(expiresAt));
@@ -26,45 +26,44 @@ function AuthStatusCard({
 
   function getPlaylistStatusLabel() {
     if (playlistsStatus === "success") {
-      return `${playlistsCount} loaded`;
+      return `${playlistsCount}件読み込み済み`;
     }
 
     if (playlistsStatus === "loading") {
-      return "Loading";
+      return "読み込み中";
     }
 
     if (playlistsStatus === "error") {
-      return "Error";
+      return "エラー";
     }
 
-    return "Idle";
+    return "待機中";
   }
 
   return (
     <section className="auth-card">
-      <p className="eyebrow">Step 1 / Spotify OAuth</p>
+      <p className="eyebrow">Spotifyログイン</p>
       <h1>Spotify Playlist Organizer</h1>
       <p className="lead">
-        Start with Spotify login so the next step can fetch and display playlists.
+        Spotify にログインすると、プレイリストの取得・タグ整理・新しいプレイリスト作成ができます。
       </p>
       <p className="helper redirect-helper">
-        Redirect URI: <code>{redirectUri}</code>
+        リダイレクトURI: <code>{redirectUri}</code>
       </p>
 
       {!hasConfig && (
         <div className="notice error">
-          <strong>Configuration required.</strong>
+          <strong>設定が必要です。</strong>
           <p>
-            Set <code>VITE_SPOTIFY_CLIENT_ID</code> in <code>frontend/.env</code> for
-            local development, or add it in Cloudflare Worker Build Variables for
-            deployed environments.
+            ローカルでは <code>frontend/.env</code> に <code>VITE_SPOTIFY_CLIENT_ID</code> を設定してください。
+            Cloudflare に公開している場合は、Worker Build Variables に追加してください。
           </p>
         </div>
       )}
 
       {authStatus === "loading" && (
         <div className="notice">
-          <p>Completing Spotify authentication...</p>
+          <p>Spotify 認証を完了しています...</p>
         </div>
       )}
 
@@ -77,28 +76,27 @@ function AuthStatusCard({
       {isAuthenticated ? (
         <div className="session-panel">
           <div className="session-row">
-            <span className="label">Status</span>
-            <span className="value success">Authenticated</span>
+            <span className="label">状態</span>
+            <span className="value success">ログイン済み</span>
           </div>
           <div className="session-row">
-            <span className="label">Token expires</span>
+            <span className="label">有効期限</span>
             <span className="value">{formatExpiry(session?.expiresAt)}</span>
           </div>
           <div className="session-row">
-            <span className="label">Playlist fetch</span>
+            <span className="label">プレイリスト取得</span>
             <span className="value">{getPlaylistStatusLabel()}</span>
           </div>
           <div className="action-row">
             <button className="secondary-button" type="button" onClick={onLogout}>
-              Logout
+              ログアウト
             </button>
           </div>
           <p className="helper">
-            The next step will use this access token to fetch playlists.
+            このログイン情報を使ってプレイリストや楽曲を取得します。
           </p>
           <p className="helper">
-            Keep this redirect URI registered in your Spotify app settings for both
-            local and Cloudflare Pages access.
+            Spotify アプリ設定には、このリダイレクトURIを登録したままにしてください。
           </p>
         </div>
       ) : (
@@ -109,7 +107,7 @@ function AuthStatusCard({
             onClick={onLogin}
             disabled={!hasConfig || authStatus === "loading"}
           >
-            Login with Spotify
+            Spotifyでログイン
           </button>
         </div>
       )}

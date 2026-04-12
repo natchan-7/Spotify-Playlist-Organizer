@@ -15,7 +15,7 @@ function formatDuration(durationMs) {
 
 function formatArtists(artists) {
   if (!Array.isArray(artists) || artists.length === 0) {
-    return "Unknown artist";
+    return "不明なアーティスト";
   }
 
   return artists.map((artist) => artist.name).join(", ");
@@ -55,6 +55,7 @@ function PlaylistTracks({
   tracksStatus,
 }) {
   const taggedTrackCount = tracks.filter((track) => track.autoTags?.length > 0).length;
+  const userTaggedTrackCount = tracks.filter((track) => track.userTags?.length > 0).length;
   const totalAutoTagCount = tracks.reduce(
     (count, track) => count + (track.autoTags?.length || 0),
     0
@@ -69,18 +70,18 @@ function PlaylistTracks({
 
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
-      return `Auto tags ready (${taggedTrackCount} tagged)`;
+      return `自動タグ準備完了（${taggedTrackCount}曲）`;
     }
 
     if (genreStatus === "loading") {
-      return "Preparing auto tags";
+      return "自動タグを準備中";
     }
 
     if (genreStatus === "error") {
-      return "Auto tags unavailable";
+      return "自動タグを取得できません";
     }
 
-    return "Auto tags idle";
+    return "自動タグ待機中";
   }
 
   function updateTagDraft(trackId, value) {
@@ -100,12 +101,12 @@ function PlaylistTracks({
     const result = onAddUserTag?.(trackId, tagDrafts[trackId] || "");
 
     if (!result?.ok) {
-      let message = "Tag could not be added.";
+      let message = "タグを追加できませんでした。";
 
       if (result?.reason === "empty") {
-        message = "Enter a tag before adding it.";
+        message = "タグを入力してください。";
       } else if (result?.reason === "duplicate") {
-        message = "That tag is already attached to this track.";
+        message = "同じタグはすでに追加されています。";
       } else if (result?.reason === "storage" && result.message) {
         message = result.message;
       }
@@ -133,7 +134,7 @@ function PlaylistTracks({
     if (!result?.ok && result?.reason === "storage") {
       setTagFeedback((currentFeedback) => ({
         ...currentFeedback,
-        [trackId]: result.message || "Tag could not be removed.",
+        [trackId]: result.message || "タグを削除できませんでした。",
       }));
       return;
     }
@@ -148,20 +149,20 @@ function PlaylistTracks({
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Step 3 / Tracks + Step 4 / Auto Tags</p>
-          <h2>Playlist tracks</h2>
+          <p className="eyebrow">楽曲一覧</p>
+          <h2>プレイリストの楽曲</h2>
           {selectedPlaylist && (
             <>
               <p className="panel-subtitle">{selectedPlaylist.name}</p>
               <p className="panel-subtitle panel-subtitle-muted">
-                {selectedPlaylist.totalTracks} tracks by {selectedPlaylist.ownerName}
+                {selectedPlaylist.totalTracks}曲 / {selectedPlaylist.ownerName}
               </p>
             </>
           )}
         </div>
         {tracksStatus === "success" && selectedPlaylist && (
           <div className="track-status-group">
-            <span className="playlist-count">{tracks.length} loaded</span>
+            <span className="playlist-count">{tracks.length}曲表示中</span>
             {tracks.length > 0 && (
               <span className="playlist-count playlist-count-secondary">
                 {getAutoTagStatusLabel()}
@@ -173,13 +174,13 @@ function PlaylistTracks({
 
       {!selectedPlaylist && (
         <div className="notice">
-          <p>Select a playlist to load its tracks.</p>
+          <p>プレイリストを選ぶと楽曲を表示できます。</p>
         </div>
       )}
 
       {selectedPlaylist && tracksStatus === "loading" && (
         <div className="notice">
-          <p>Fetching tracks from Spotify...</p>
+          <p>Spotify から楽曲を取得しています...</p>
         </div>
       )}
 
@@ -192,10 +193,26 @@ function PlaylistTracks({
       {selectedPlaylist && tracksStatus === "success" && tracks.length === 0 && (
         <div className="notice">
           <p>
-            No supported Spotify track items were returned for this playlist.
-            This usually means the playlist is empty, or it only contains local
-            or unavailable items.
+            このプレイリストでは表示できる楽曲が見つかりませんでした。
+            空のプレイリストか、ローカル曲・利用できない曲のみの可能性があります。
           </p>
+        </div>
+      )}
+
+      {selectedPlaylist && tracksStatus === "success" && tracks.length > 0 && (
+        <div className="creation-summary-grid track-summary-grid">
+          <div className="creation-summary-card">
+            <span className="creation-summary-label">表示中の楽曲</span>
+            <strong>{tracks.length}曲</strong>
+          </div>
+          <div className="creation-summary-card">
+            <span className="creation-summary-label">自動タグ付き</span>
+            <strong>{taggedTrackCount}曲</strong>
+          </div>
+          <div className="creation-summary-card">
+            <span className="creation-summary-label">手動タグ付き</span>
+            <strong>{userTaggedTrackCount}曲</strong>
+          </div>
         </div>
       )}
 
@@ -205,10 +222,9 @@ function PlaylistTracks({
         genreStatus === "success" &&
         taggedTrackCount === 0 && (
           <div className="notice">
-            <p>No automatic genre tags were added to this playlist.</p>
+            <p>このプレイリストには自動タグを付けられませんでした。</p>
             <p>
-              Spotify did not return usable genres, and there were no artist-name
-              fallback tags available for these tracks.
+              Spotify から使えるジャンル情報が返らず、アーティスト名からも補助タグを作れませんでした。
             </p>
           </div>
         )}
@@ -220,8 +236,7 @@ function PlaylistTracks({
         taggedTrackCount > 0 && (
           <div className="notice">
             <p>
-              Prepared {totalAutoTagCount} automatic genre tags across{" "}
-              {taggedTrackCount} tracks.
+              {taggedTrackCount}曲に合計{totalAutoTagCount}個の自動タグを用意しました。
             </p>
           </div>
         )}
@@ -233,8 +248,7 @@ function PlaylistTracks({
         tagStorageSummary?.updatedTrackCount > 0 && (
           <div className="notice">
             <p>
-              Saved {tagStorageSummary.savedAutoTagCount} automatic tags for{" "}
-              {tagStorageSummary.updatedTrackCount} tracks in this browser.
+              {tagStorageSummary.updatedTrackCount}曲分、合計{tagStorageSummary.savedAutoTagCount}個の自動タグをこのブラウザに保存しました。
             </p>
           </div>
         )}
@@ -247,7 +261,7 @@ function PlaylistTracks({
         tagStorageSummary.updatedTrackCount === 0 &&
         taggedTrackCount > 0 && (
           <div className="notice">
-            <p>Automatic tags were already stored for the tracks shown here.</p>
+            <p>表示中の楽曲の自動タグは、すでにこのブラウザに保存されています。</p>
           </div>
         )}
 
@@ -257,7 +271,7 @@ function PlaylistTracks({
         tagStorageStatus === "error" &&
         tagStorageError && (
           <div className="notice error">
-            <p>Automatic tags were prepared, but saving them in this browser failed.</p>
+            <p>自動タグは作成できましたが、このブラウザへの保存に失敗しました。</p>
             <p>{tagStorageError}</p>
           </div>
         )}
@@ -267,7 +281,7 @@ function PlaylistTracks({
         tracks.length > 0 &&
         genreStatus === "loading" && (
           <div className="notice">
-            <p>Preparing automatic genre tags from the playlist artists...</p>
+            <p>アーティスト情報から自動タグを準備しています...</p>
           </div>
         )}
 
@@ -277,7 +291,7 @@ function PlaylistTracks({
         genreStatus === "error" &&
         genreError && (
           <div className="notice error">
-            <p>Tracks loaded, but automatic genre tags could not be prepared.</p>
+            <p>楽曲は読み込めましたが、自動タグを準備できませんでした。</p>
             <p>{genreError}</p>
           </div>
         )}
@@ -290,7 +304,7 @@ function PlaylistTracks({
                 {track.thumbnailUrl ? (
                   <img
                     src={track.thumbnailUrl}
-                    alt={`${track.album} album art`}
+                    alt={`${track.album} のジャケット画像`}
                     loading="lazy"
                   />
                 ) : (
@@ -321,8 +335,11 @@ function PlaylistTracks({
                         className="user-tag"
                         type="button"
                         onClick={() => handleUserTagRemove(track.id, tag)}
+                        aria-label={`${formatTagLabel(tag)} を削除`}
+                        title={`${formatTagLabel(tag)} を削除`}
                       >
-                        {formatTagLabel(tag)} x
+                        <span>{formatTagLabel(tag)}</span>
+                        <span aria-hidden="true">×</span>
                       </button>
                     ))}
                   </div>
@@ -336,11 +353,11 @@ function PlaylistTracks({
                     type="text"
                     value={tagDrafts[track.id] || ""}
                     onChange={(event) => updateTagDraft(track.id, event.target.value)}
-                    placeholder="Add a user tag"
-                    aria-label={`Add a user tag for ${track.name}`}
+                    placeholder="手動タグを追加"
+                    aria-label={`${track.name} に手動タグを追加`}
                   />
                   <button className="user-tag-add-button" type="submit">
-                    Add tag
+                    追加
                   </button>
                 </form>
                 {tagFeedback[track.id] && (

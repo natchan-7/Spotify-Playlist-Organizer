@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 function buildDefaultPlaylistName(selectedPlaylist, selectedTag) {
   if (!selectedPlaylist?.name || !selectedTag) {
@@ -7,6 +7,14 @@ function buildDefaultPlaylistName(selectedPlaylist, selectedTag) {
   }
 
   return `${selectedPlaylist.name} - ${selectedTag}`;
+}
+
+function formatArtists(artists) {
+  if (!Array.isArray(artists) || artists.length === 0) {
+    return "不明なアーティスト";
+  }
+
+  return artists.map((artist) => artist.name).join(", ");
 }
 
 function PlaylistCreationPanel({
@@ -23,10 +31,12 @@ function PlaylistCreationPanel({
   const [selectedTagValue, setSelectedTagValue] = useState("");
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [isTagMenuOpen, setIsTagMenuOpen] = useState(false);
+  const [highlightedTagIndex, setHighlightedTagIndex] = useState(-1);
   const [playlistName, setPlaylistName] = useState("");
   const [visibility, setVisibility] = useState("private");
   const [formError, setFormError] = useState("");
   const [isPlaylistNameDirty, setIsPlaylistNameDirty] = useState(false);
+  const deferredTagSearchQuery = useDeferredValue(tagSearchQuery);
 
   const availableUserTags = useMemo(
     () =>
@@ -55,7 +65,7 @@ function PlaylistCreationPanel({
   const availableTagOptions =
     selectedTagType === "auto" ? availableAutoTags : availableUserTags;
   const filteredTagOptions = useMemo(() => {
-    const normalizedQuery = tagSearchQuery.trim().toLowerCase();
+    const normalizedQuery = deferredTagSearchQuery.trim().toLowerCase();
 
     if (!normalizedQuery) {
       return availableTagOptions;
@@ -64,7 +74,7 @@ function PlaylistCreationPanel({
     return availableTagOptions.filter((tag) =>
       tag.toLowerCase().includes(normalizedQuery)
     );
-  }, [availableTagOptions, tagSearchQuery]);
+  }, [availableTagOptions, deferredTagSearchQuery]);
 
   const matchedTracks = useMemo(() => {
     if (!selectedTagValue) {
@@ -77,12 +87,14 @@ function PlaylistCreationPanel({
       )
     );
   }, [selectedTagType, selectedTagValue, tracks]);
+  const previewTracks = matchedTracks.slice(0, 5);
 
   useEffect(() => {
     setSelectedTagType("user");
     setSelectedTagValue("");
     setTagSearchQuery("");
     setIsTagMenuOpen(false);
+    setHighlightedTagIndex(-1);
     setPlaylistName("");
     setVisibility("private");
     setFormError("");
@@ -103,25 +115,33 @@ function PlaylistCreationPanel({
     }
 
     setSelectedTagValue("");
+    setTagSearchQuery("");
   }, [availableAutoTags.length, availableUserTags.length]);
 
   useEffect(() => {
-    if (availableTagOptions.length === 0) {
+    if (
+      selectedTagValue &&
+      !availableTagOptions.some((tag) => tag.toLowerCase() === selectedTagValue.toLowerCase())
+    ) {
       setSelectedTagValue("");
       setTagSearchQuery("");
+    }
+  }, [availableTagOptions, selectedTagValue]);
+
+  useEffect(() => {
+    if (!isTagMenuOpen || filteredTagOptions.length === 0) {
+      setHighlightedTagIndex(-1);
       return;
     }
 
-    setSelectedTagValue((currentTag) =>
-      currentTag && availableTagOptions.includes(currentTag)
-        ? currentTag
-        : availableTagOptions[0]
-    );
-  }, [availableTagOptions]);
+    setHighlightedTagIndex((currentIndex) => {
+      if (currentIndex < 0 || currentIndex >= filteredTagOptions.length) {
+        return 0;
+      }
 
-  useEffect(() => {
-    setTagSearchQuery(selectedTagValue);
-  }, [selectedTagValue]);
+      return currentIndex;
+    });
+  }, [filteredTagOptions, isTagMenuOpen]);
 
   useEffect(() => {
     if (!selectedTagValue) {
@@ -140,12 +160,12 @@ function PlaylistCreationPanel({
     event.preventDefault();
 
     if (!selectedTagValue) {
-      setFormError("Select an auto tag or user tag before creating a playlist.");
+      setFormError("プレイリストを作成する前にタグを選択してください。");
       return;
     }
 
     if (!playlistName.trim()) {
-      setFormError("Enter a playlist name before creating it.");
+      setFormError("プレイリスト名を入力してください。");
       return;
     }
 
@@ -161,14 +181,17 @@ function PlaylistCreationPanel({
 
     if (!result?.ok) {
       if (result?.reason === "validation" || result?.reason === "scope") {
-        setFormError(result?.message || "Playlist creation failed.");
+        setFormError(result?.message || "プレイリストを作成できませんでした。");
       }
     }
   }
 
   function updateSelectedTagType(nextTagType) {
     setSelectedTagType(nextTagType);
+    setSelectedTagValue("");
+    setTagSearchQuery("");
     setIsTagMenuOpen(false);
+    setHighlightedTagIndex(-1);
     setFormError("");
     onResetPlaylistCreationState?.();
   }
@@ -177,6 +200,7 @@ function PlaylistCreationPanel({
     setSelectedTagValue(nextTag);
     setTagSearchQuery(nextTag);
     setIsTagMenuOpen(false);
+    setHighlightedTagIndex(-1);
     setFormError("");
     onResetPlaylistCreationState?.();
   }
@@ -184,6 +208,7 @@ function PlaylistCreationPanel({
   function updateTagSearchQuery(nextQuery) {
     setTagSearchQuery(nextQuery);
     setIsTagMenuOpen(true);
+    setHighlightedTagIndex(0);
 
     const exactMatch = availableTagOptions.find(
       (tag) => tag.toLowerCase() === nextQuery.trim().toLowerCase()
@@ -192,6 +217,71 @@ function PlaylistCreationPanel({
     setSelectedTagValue(exactMatch || "");
     setFormError("");
     onResetPlaylistCreationState?.();
+  }
+
+  function clearSelectedTag() {
+    setSelectedTagValue("");
+    setTagSearchQuery("");
+    setIsTagMenuOpen(false);
+    setHighlightedTagIndex(-1);
+    setFormError("");
+    onResetPlaylistCreationState?.();
+  }
+
+  function handleTagInputKeyDown(event) {
+    if (event.key === "Escape") {
+      setIsTagMenuOpen(false);
+      setHighlightedTagIndex(-1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+
+      if (!isTagMenuOpen) {
+        setIsTagMenuOpen(true);
+      }
+
+      if (filteredTagOptions.length === 0) {
+        return;
+      }
+
+      setHighlightedTagIndex((currentIndex) =>
+        currentIndex < 0 || currentIndex >= filteredTagOptions.length - 1
+          ? 0
+          : currentIndex + 1
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+
+      if (!isTagMenuOpen) {
+        setIsTagMenuOpen(true);
+      }
+
+      if (filteredTagOptions.length === 0) {
+        return;
+      }
+
+      setHighlightedTagIndex((currentIndex) =>
+        currentIndex <= 0 ? filteredTagOptions.length - 1 : currentIndex - 1
+      );
+      return;
+    }
+
+    if (event.key === "Enter" && isTagMenuOpen) {
+      const highlightedTag = filteredTagOptions[highlightedTagIndex];
+      const exactMatch = availableTagOptions.find(
+        (tag) => tag.toLowerCase() === tagSearchQuery.trim().toLowerCase()
+      );
+
+      if (highlightedTag || exactMatch) {
+        event.preventDefault();
+        updateSelectedTagValue(highlightedTag || exactMatch);
+      }
+    }
   }
 
   function handleTagInputBlur() {
@@ -217,30 +307,30 @@ function PlaylistCreationPanel({
     <section className="panel">
       <div className="panel-header">
         <div>
-          <p className="eyebrow">Step 8 / Create Playlist</p>
-          <h2>Create a filtered Spotify playlist</h2>
+          <p className="eyebrow">プレイリスト作成</p>
+          <h2>タグで絞り込んだプレイリストを作成</h2>
           {selectedPlaylist && (
             <p className="panel-subtitle">
-              Build a new playlist from the automatic or user tags attached to {selectedPlaylist.name}.
+              {selectedPlaylist.name} に付いている自動タグまたは手動タグを使って、新しいプレイリストを作成できます。
             </p>
           )}
         </div>
         {selectedPlaylist && tracksStatus === "success" && (
           <span className="playlist-count">
-            {availableAutoTags.length + availableUserTags.length} tags ready
+            {availableAutoTags.length + availableUserTags.length}件のタグ
           </span>
         )}
       </div>
 
       {!selectedPlaylist && (
         <div className="notice">
-          <p>Select a playlist first, then choose an automatic or user tag.</p>
+          <p>プレイリストを選んでから、使いたいタグを選択してください。</p>
         </div>
       )}
 
       {selectedPlaylist && tracksStatus !== "success" && (
         <div className="notice">
-          <p>Load tracks before creating a filtered playlist.</p>
+          <p>まず楽曲を読み込んでください。</p>
         </div>
       )}
 
@@ -249,7 +339,7 @@ function PlaylistCreationPanel({
         availableUserTags.length === 0 &&
         availableAutoTags.length === 0 && (
         <div className="notice">
-          <p>Wait for automatic tags or add a user tag to a track before creating a playlist.</p>
+          <p>自動タグの準備を待つか、手動タグを追加してから作成してください。</p>
         </div>
       )}
 
@@ -258,24 +348,24 @@ function PlaylistCreationPanel({
         (availableUserTags.length > 0 || availableAutoTags.length > 0) && (
         <form className="playlist-create-form" onSubmit={handleSubmit}>
           <label className="playlist-create-field">
-            <span className="playlist-create-label">Tag source</span>
+            <span className="playlist-create-label">タグの種類</span>
             <select
               className="playlist-create-select"
               value={selectedTagType}
               onChange={(event) => updateSelectedTagType(event.target.value)}
             >
               {availableAutoTags.length > 0 && (
-                <option value="auto">Automatic tags</option>
+                <option value="auto">自動タグ</option>
               )}
               {availableUserTags.length > 0 && (
-                <option value="user">User tags</option>
+                <option value="user">手動タグ</option>
               )}
             </select>
           </label>
 
           <label className="playlist-create-field">
             <span className="playlist-create-label">
-              {selectedTagType === "auto" ? "Automatic tag" : "User tag"}
+              {selectedTagType === "auto" ? "自動タグ" : "手動タグ"}
             </span>
             <div className="tag-search-field">
               <input
@@ -283,27 +373,40 @@ function PlaylistCreationPanel({
                 type="text"
                 value={tagSearchQuery}
                 onChange={(event) => updateTagSearchQuery(event.target.value)}
+                onKeyDown={handleTagInputKeyDown}
                 onFocus={() => setIsTagMenuOpen(true)}
                 onBlur={handleTagInputBlur}
                 placeholder={
                   selectedTagType === "auto"
-                    ? "Search automatic tags"
-                    : "Search user tags"
+                    ? "自動タグを検索"
+                    : "手動タグを検索"
                 }
                 aria-label={
                   selectedTagType === "auto"
-                    ? "Search automatic tags"
-                    : "Search user tags"
+                    ? "自動タグを検索"
+                    : "手動タグを検索"
                 }
               />
+              {(tagSearchQuery || selectedTagValue) && (
+                <button
+                  className="tag-search-clear-button"
+                  type="button"
+                  onMouseDown={clearSelectedTag}
+                  aria-label="タグの検索条件をクリア"
+                >
+                  ×
+                </button>
+              )}
               {isTagMenuOpen && (
                 <div className="tag-search-results">
                   {filteredTagOptions.length > 0 ? (
-                    filteredTagOptions.map((tag) => (
+                    filteredTagOptions.map((tag, index) => (
                       <button
                         key={tag}
                         className={`tag-search-option${
-                          tag === selectedTagValue ? " tag-search-option-selected" : ""
+                          tag === selectedTagValue || index === highlightedTagIndex
+                            ? " tag-search-option-selected"
+                            : ""
                         }`}
                         type="button"
                         onMouseDown={() => updateSelectedTagValue(tag)}
@@ -312,60 +415,99 @@ function PlaylistCreationPanel({
                       </button>
                     ))
                   ) : (
-                    <div className="tag-search-empty">No matching tags found.</div>
+                    <div className="tag-search-empty">一致するタグが見つかりません。</div>
                   )}
                 </div>
               )}
             </div>
             <span className="playlist-create-help">
-              {filteredTagOptions.length} match{filteredTagOptions.length === 1 ? "" : "es"}
+              {filteredTagOptions.length}件
               {availableTagOptions.length > filteredTagOptions.length
-                ? ` out of ${availableTagOptions.length}`
+                ? ` / 全${availableTagOptions.length}件`
                 : ""}
             </span>
+            {selectedTagValue ? (
+              <div className="tag-selection-summary">
+                <span className="playlist-pill">選択中: {selectedTagValue}</span>
+                <span className="playlist-create-help">
+                  Enter で候補を確定、Esc で候補を閉じられます。
+                </span>
+              </div>
+            ) : (
+              <span className="playlist-create-help">
+                候補をクリックするか、上下キーと Enter で選べます。
+              </span>
+            )}
           </label>
 
           <label className="playlist-create-field">
-            <span className="playlist-create-label">Playlist name</span>
+            <span className="playlist-create-label">プレイリスト名</span>
             <input
               className="playlist-create-input"
               type="text"
               value={playlistName}
               onChange={(event) => updatePlaylistName(event.target.value)}
-              placeholder="New Spotify playlist name"
+              placeholder="新しいプレイリスト名"
             />
           </label>
 
           <label className="playlist-create-field">
-            <span className="playlist-create-label">Visibility</span>
+            <span className="playlist-create-label">公開設定</span>
             <select
               className="playlist-create-select"
               value={visibility}
               onChange={(event) => updateVisibility(event.target.value)}
             >
-              <option value="private">Private</option>
-              <option value="public">Public</option>
+              <option value="private">非公開</option>
+              <option value="public">公開</option>
             </select>
           </label>
 
           {selectedTagValue && (
             <div className="creation-summary-grid">
               <div className="creation-summary-card">
-                <span className="creation-summary-label">Matching tracks</span>
+                <span className="creation-summary-label">一致した曲数</span>
                 <strong>{matchedTracks.length}</strong>
               </div>
               <div className="creation-summary-card">
-                <span className="creation-summary-label">Selected tag</span>
+                <span className="creation-summary-label">選択中のタグ</span>
                 <strong>{selectedTagValue}</strong>
               </div>
               <div className="creation-summary-card">
-                <span className="creation-summary-label">Tag source</span>
-                <strong>{selectedTagType === "auto" ? "Automatic" : "User"}</strong>
+                <span className="creation-summary-label">タグの種類</span>
+                <strong>{selectedTagType === "auto" ? "自動" : "手動"}</strong>
               </div>
               <div className="creation-summary-card">
-                <span className="creation-summary-label">Visibility</span>
-                <strong>{visibility}</strong>
+                <span className="creation-summary-label">公開設定</span>
+                <strong>{visibility === "public" ? "公開" : "非公開"}</strong>
               </div>
+            </div>
+          )}
+
+          {selectedTagValue && matchedTracks.length > 0 && (
+            <div className="playlist-preview-panel">
+              <div className="playlist-preview-header">
+                <div>
+                  <h3>作成前プレビュー</h3>
+                  <p>「{selectedTagValue}」に一致する楽曲を追加します。</p>
+                </div>
+                <span className="playlist-count playlist-count-secondary">
+                  {matchedTracks.length}曲
+                </span>
+              </div>
+              <div className="playlist-preview-list">
+                {previewTracks.map((track) => (
+                  <div key={`preview-${track.id}`} className="playlist-preview-row">
+                    <strong>{track.name}</strong>
+                    <span>{formatArtists(track.artists)}</span>
+                  </div>
+                ))}
+              </div>
+              {matchedTracks.length > previewTracks.length && (
+                <p className="playlist-preview-more">
+                  ほか {matchedTracks.length - previewTracks.length}曲も追加されます。
+                </p>
+              )}
             </div>
           )}
 
@@ -384,10 +526,11 @@ function PlaylistCreationPanel({
           {playlistCreationStatus === "success" && createdPlaylist && (
             <div className="notice success-notice">
               <p>
-                Created "{createdPlaylist.name}" from the {createdPlaylist.tagTypeLabel} tag "{createdPlaylist.tagValue}".
+                「{createdPlaylist.tagValue}」の{createdPlaylist.tagTypeLabel}タグから
+                「{createdPlaylist.name}」を作成しました。
               </p>
               <p>
-                Added {createdPlaylist.addedTrackCount} tracks from {selectedPlaylist?.name}
+                {selectedPlaylist?.name} から {createdPlaylist.addedTrackCount}曲を追加しました
                 {createdPlaylist.spotifyUrl ? (
                   <>
                     .{" "}
@@ -397,7 +540,7 @@ function PlaylistCreationPanel({
                       rel="noreferrer"
                       target="_blank"
                     >
-                      Open in Spotify
+                      Spotifyで開く
                     </a>
                   </>
                 ) : (
@@ -418,8 +561,8 @@ function PlaylistCreationPanel({
               }
             >
               {playlistCreationStatus === "loading"
-                ? "Creating playlist..."
-                : "Create playlist"}
+                ? "作成中..."
+                : "プレイリストを作成"}
             </button>
           </div>
         </form>
