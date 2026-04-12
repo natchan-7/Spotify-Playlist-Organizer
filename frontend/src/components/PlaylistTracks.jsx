@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import { useEffect, useState } from "react";
 
 function formatDuration(durationMs) {
   if (!durationMs) {
@@ -39,6 +40,8 @@ function formatTagLabel(tag) {
 function PlaylistTracks({
   genreError,
   genreStatus,
+  onAddUserTag,
+  onRemoveUserTag,
   selectedPlaylist,
   tagStorageError,
   tagStorageStatus,
@@ -52,6 +55,13 @@ function PlaylistTracks({
     (count, track) => count + (track.autoTags?.length || 0),
     0
   );
+  const [tagDrafts, setTagDrafts] = useState({});
+  const [tagFeedback, setTagFeedback] = useState({});
+
+  useEffect(() => {
+    setTagDrafts({});
+    setTagFeedback({});
+  }, [selectedPlaylist?.id]);
 
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
@@ -67,6 +77,67 @@ function PlaylistTracks({
     }
 
     return "Auto tags idle";
+  }
+
+  function updateTagDraft(trackId, value) {
+    setTagDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [trackId]: value,
+    }));
+    setTagFeedback((currentFeedback) => ({
+      ...currentFeedback,
+      [trackId]: "",
+    }));
+  }
+
+  function handleTagSubmit(event, trackId) {
+    event.preventDefault();
+
+    const result = onAddUserTag?.(trackId, tagDrafts[trackId] || "");
+
+    if (!result?.ok) {
+      let message = "Tag could not be added.";
+
+      if (result?.reason === "empty") {
+        message = "Enter a tag before adding it.";
+      } else if (result?.reason === "duplicate") {
+        message = "That tag is already attached to this track.";
+      } else if (result?.reason === "storage" && result.message) {
+        message = result.message;
+      }
+
+      setTagFeedback((currentFeedback) => ({
+        ...currentFeedback,
+        [trackId]: message,
+      }));
+      return;
+    }
+
+    setTagDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [trackId]: "",
+    }));
+    setTagFeedback((currentFeedback) => ({
+      ...currentFeedback,
+      [trackId]: "",
+    }));
+  }
+
+  function handleUserTagRemove(trackId, userTag) {
+    const result = onRemoveUserTag?.(trackId, userTag);
+
+    if (!result?.ok && result?.reason === "storage") {
+      setTagFeedback((currentFeedback) => ({
+        ...currentFeedback,
+        [trackId]: result.message || "Tag could not be removed.",
+      }));
+      return;
+    }
+
+    setTagFeedback((currentFeedback) => ({
+      ...currentFeedback,
+      [trackId]: "",
+    }));
   }
 
   return (
@@ -233,14 +304,43 @@ function PlaylistTracks({
                 </div>
                 <p className="track-meta">{formatArtists(track.artists)}</p>
                 <p className="track-meta">{track.album}</p>
-                {track.autoTags?.length > 0 && (
+                {(track.autoTags?.length > 0 || track.userTags?.length > 0) && (
                   <div className="track-tag-row">
                     {track.autoTags.map((tag) => (
                       <span key={`${track.id}-${tag}`} className="auto-tag">
                         {formatTagLabel(tag)}
                       </span>
                     ))}
+                    {track.userTags.map((tag) => (
+                      <button
+                        key={`${track.id}-user-${tag}`}
+                        className="user-tag"
+                        type="button"
+                        onClick={() => handleUserTagRemove(track.id, tag)}
+                      >
+                        {formatTagLabel(tag)} x
+                      </button>
+                    ))}
                   </div>
+                )}
+                <form
+                  className="user-tag-form"
+                  onSubmit={(event) => handleTagSubmit(event, track.id)}
+                >
+                  <input
+                    className="user-tag-input"
+                    type="text"
+                    value={tagDrafts[track.id] || ""}
+                    onChange={(event) => updateTagDraft(track.id, event.target.value)}
+                    placeholder="Add a user tag"
+                    aria-label={`Add a user tag for ${track.name}`}
+                  />
+                  <button className="user-tag-add-button" type="submit">
+                    Add tag
+                  </button>
+                </form>
+                {tagFeedback[track.id] && (
+                  <p className="tag-feedback">{tagFeedback[track.id]}</p>
                 )}
               </div>
             </article>

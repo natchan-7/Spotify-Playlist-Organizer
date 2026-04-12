@@ -1,9 +1,30 @@
+import {
+  getStoredArtistGenreCache,
+  saveArtistGenreCache,
+} from "../utils/storage";
+
 const SPOTIFY_API_URL = "https://api.spotify.com/v1";
 
 function createAuthorizedHeaders(accessToken) {
   return {
     Authorization: `Bearer ${accessToken}`,
   };
+}
+
+async function parseJsonSafely(response) {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {
+      message: text,
+    };
+  }
 }
 
 function createPlaylistTracksHref(playlist) {
@@ -68,13 +89,25 @@ async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
   const response = await fetch(url, {
     headers: createAuthorizedHeaders(accessToken),
   });
-  const payload = await response.json();
+  const payload = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const message =
-      payload?.error?.message || fallbackMessage || "Failed to fetch Spotify playlists.";
+    const retryAfter = response.headers.get("Retry-After");
+    let message =
+      payload?.error?.message ||
+      payload?.message ||
+      fallbackMessage ||
+      "Failed to fetch Spotify playlists.";
+
+    if (response.status === 429) {
+      message = retryAfter
+        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
+        : "Spotify rate limit reached. Wait a moment and try again.";
+    }
+
     const error = new Error(message);
     error.status = response.status;
+    error.retryAfter = retryAfter ? Number(retryAfter) : null;
     throw error;
   }
 
@@ -97,7 +130,7 @@ async function fetchPlaylistTrackTotal(accessToken, playlist) {
     return playlist.totalTracks;
   }
 
-  const payload = await response.json();
+  const payload = await parseJsonSafely(response);
   const totalTracks = Number(payload?.total);
 
   return Number.isFinite(totalTracks) ? totalTracks : playlist.totalTracks;
@@ -246,20 +279,53 @@ function createArtistGenresMap(artists) {
   );
 }
 
-async function fetchSingleArtistGenres(accessToken, artistId) {
-  const payload = await fetchSpotifyPage(
-    `${SPOTIFY_API_URL}/artists/${artistId}`,
-    accessToken,
-    "Failed to fetch Spotify artist genres."
+function createArtistGenreCacheEntries(artistGenresByArtistId, cachedAt = Date.now()) {
+  return Object.fromEntries(
+    Object.entries(artistGenresByArtistId).map(([artistId, genres]) => [
+      artistId,
+      {
+        genres: Array.isArray(genres) ? genres : [],
+        cachedAt,
+      },
+    ])
   );
+}
 
+function mergeArtistGenreCacheEntries(artistGenreCache, artistGenresByArtistId) {
   return {
-    [artistId]: Array.isArray(payload.genres) ? payload.genres : [],
+    ...artistGenreCache,
+    ...createArtistGenreCacheEntries(artistGenresByArtistId),
   };
 }
 
-async function fetchArtistGenresInChunks(accessToken, artistIds) {
+function splitArtistIdsByCache(artistIds, artistGenreCache) {
+  const cachedArtistGenresByArtistId = {};
+  const missingArtistIds = [];
+
+  artistIds.forEach((artistId) => {
+    const cachedEntry = artistGenreCache?.[artistId];
+
+    if (cachedEntry && Array.isArray(cachedEntry.genres)) {
+      cachedArtistGenresByArtistId[artistId] = cachedEntry.genres;
+      return;
+    }
+
+    missingArtistIds.push(artistId);
+  });
+
+  return {
+    cachedArtistGenresByArtistId,
+    missingArtistIds,
+  };
+}
+
+function createEmptyArtistGenresMap(artistIds) {
+  return Object.fromEntries(artistIds.map((artistId) => [artistId, []]));
+}
+
+async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCache) {
   const artistGenresByArtistId = {};
+  let nextArtistGenreCache = { ...artistGenreCache };
 
   for (let index = 0; index < artistIds.length; index += 50) {
     const chunk = artistIds.slice(index, index + 50);
@@ -267,29 +333,41 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
 
     url.searchParams.set("ids", chunk.join(","));
 
-    const payload = await fetchSpotifyPage(
-      url.toString(),
-      accessToken,
-      "Failed to fetch Spotify artist genres."
-    );
+    try {
+      const payload = await fetchSpotifyPage(
+        url.toString(),
+        accessToken,
+        "Failed to fetch Spotify artist genres."
+      );
+      const chunkArtistGenresByArtistId = createArtistGenresMap(payload.artists || []);
 
-    Object.assign(
-      artistGenresByArtistId,
-      createArtistGenresMap(payload.artists || [])
-    );
-  }
+      Object.assign(
+        artistGenresByArtistId,
+        chunkArtistGenresByArtistId
+      );
+      nextArtistGenreCache = mergeArtistGenreCacheEntries(
+        nextArtistGenreCache,
+        chunkArtistGenresByArtistId
+      );
+      saveArtistGenreCache(nextArtistGenreCache);
+    } catch (error) {
+      if (error instanceof Error && error.status === 403) {
+        const emptyArtistGenresByArtistId = createEmptyArtistGenresMap(chunk);
 
-  return artistGenresByArtistId;
-}
+        Object.assign(
+          artistGenresByArtistId,
+          emptyArtistGenresByArtistId
+        );
+        nextArtistGenreCache = mergeArtistGenreCacheEntries(
+          nextArtistGenreCache,
+          emptyArtistGenresByArtistId
+        );
+        saveArtistGenreCache(nextArtistGenreCache);
+        continue;
+      }
 
-async function fetchArtistGenresIndividually(accessToken, artistIds) {
-  const artistGenresByArtistId = {};
-
-  for (const artistId of artistIds) {
-    Object.assign(
-      artistGenresByArtistId,
-      await fetchSingleArtistGenres(accessToken, artistId)
-    );
+      throw error;
+    }
   }
 
   return artistGenresByArtistId;
@@ -304,13 +382,24 @@ export async function fetchArtistGenres(accessToken, artistIds) {
     return {};
   }
 
-  try {
-    return await fetchArtistGenresInChunks(accessToken, normalizedArtistIds);
-  } catch (error) {
-    if (error instanceof Error && error.status === 403) {
-      return fetchArtistGenresIndividually(accessToken, normalizedArtistIds);
-    }
+  const artistGenreCache = getStoredArtistGenreCache();
+  const { cachedArtistGenresByArtistId, missingArtistIds } = splitArtistIdsByCache(
+    normalizedArtistIds,
+    artistGenreCache
+  );
 
-    throw error;
+  if (missingArtistIds.length === 0) {
+    return cachedArtistGenresByArtistId;
   }
+
+  const fetchedArtistGenresByArtistId = await fetchArtistGenresInChunks(
+    accessToken,
+    missingArtistIds,
+    artistGenreCache
+  );
+
+  return {
+    ...cachedArtistGenresByArtistId,
+    ...fetchedArtistGenresByArtistId,
+  };
 }

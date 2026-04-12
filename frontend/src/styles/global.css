@@ -404,6 +404,62 @@ code {
   line-height: 1;
 }
 
+.user-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border: 1px solid rgba(255, 201, 124, 0.28);
+  border-radius: 999px;
+  color: #ffe0ae;
+  background: rgba(255, 201, 124, 0.12);
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.user-tag:hover {
+  transform: translateY(-1px);
+}
+
+.user-tag-form {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+}
+
+.user-tag-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.8rem;
+  color: #eef4fb;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.user-tag-input::placeholder {
+  color: #8da1ba;
+}
+
+.user-tag-add-button {
+  border: 1px solid rgba(255, 201, 124, 0.28);
+  border-radius: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  color: #ffe8bf;
+  background: rgba(255, 201, 124, 0.12);
+  cursor: pointer;
+}
+
+.user-tag-add-button:hover {
+  transform: translateY(-1px);
+}
+
+.tag-feedback {
+  margin: 0;
+  color: #f3c98b;
+  font-size: 0.82rem;
+}
+
 .notice.error {
   border-color: rgba(255, 115, 115, 0.28);
   background: rgba(255, 115, 115, 0.08);
@@ -502,7 +558,8 @@ code {
   .panel-header,
   .playlist-card-top,
   .playlist-card-footer,
-  .track-title-row {
+  .track-title-row,
+  .user-tag-form {
     flex-direction: column;
   }
 

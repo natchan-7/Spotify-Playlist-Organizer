@@ -24,6 +24,14 @@ function normalizeGenreTags(genres) {
   );
 }
 
+function normalizeUserTagInput(userTag) {
+  if (typeof userTag !== "string") {
+    return "";
+  }
+
+  return userTag.trim().replace(/\s+/g, " ");
+}
+
 function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
   const genres = (track.artists || []).flatMap((artist) => {
     if (!artist?.id) {
@@ -151,5 +159,104 @@ export function persistGeneratedAutoTags(
     updatedTrackCount,
     savedAutoTagCount,
     createdEntryCount,
+  };
+}
+
+export function addUserTagToTrack(
+  trackId,
+  userTag,
+  fallbackAutoTags = [],
+  trackTagsMap = getStoredTrackTagsMap()
+) {
+  const normalizedUserTag = normalizeUserTagInput(userTag);
+
+  if (!normalizedUserTag) {
+    return {
+      ok: false,
+      reason: "empty",
+      trackTagsMap,
+    };
+  }
+
+  const tags = getTrackTags(trackId, trackTagsMap);
+  const alreadyExists = tags.user.some(
+    (tag) => tag.toLowerCase() === normalizedUserTag.toLowerCase()
+  );
+
+  if (alreadyExists) {
+    return {
+      ok: false,
+      reason: "duplicate",
+      trackTagsMap,
+    };
+  }
+
+  const nextTrackTagsMap = {
+    ...trackTagsMap,
+    [trackId]: {
+      auto: tags.auto.length > 0 ? tags.auto : dedupeTextList(fallbackAutoTags),
+      user: [...tags.user, normalizedUserTag],
+    },
+  };
+
+  saveTrackTagsMap(nextTrackTagsMap);
+
+  return {
+    ok: true,
+    trackTagsMap: nextTrackTagsMap,
+    userTags: nextTrackTagsMap[trackId].user,
+    autoTags: nextTrackTagsMap[trackId].auto,
+  };
+}
+
+export function removeUserTagFromTrack(
+  trackId,
+  userTag,
+  fallbackAutoTags = [],
+  trackTagsMap = getStoredTrackTagsMap()
+) {
+  const normalizedUserTag = normalizeUserTagInput(userTag);
+
+  if (!normalizedUserTag) {
+    return {
+      ok: false,
+      reason: "empty",
+      trackTagsMap,
+    };
+  }
+
+  const tags = getTrackTags(trackId, trackTagsMap);
+  const nextUserTags = tags.user.filter(
+    (tag) => tag.toLowerCase() !== normalizedUserTag.toLowerCase()
+  );
+
+  if (nextUserTags.length === tags.user.length) {
+    return {
+      ok: false,
+      reason: "missing",
+      trackTagsMap,
+    };
+  }
+
+  const nextAutoTags =
+    tags.auto.length > 0 ? tags.auto : dedupeTextList(fallbackAutoTags);
+  const nextTrackTagsMap = { ...trackTagsMap };
+
+  if (nextAutoTags.length === 0 && nextUserTags.length === 0) {
+    delete nextTrackTagsMap[trackId];
+  } else {
+    nextTrackTagsMap[trackId] = {
+      auto: nextAutoTags,
+      user: nextUserTags,
+    };
+  }
+
+  saveTrackTagsMap(nextTrackTagsMap);
+
+  return {
+    ok: true,
+    trackTagsMap: nextTrackTagsMap,
+    userTags: nextUserTags,
+    autoTags: nextAutoTags,
   };
 }

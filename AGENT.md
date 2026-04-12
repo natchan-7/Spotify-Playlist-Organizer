@@ -28,6 +28,8 @@ Completed:
 - Step 3: Fetch and display tracks for the selected playlist
 - Step 4: Fetch artist genres and prepare auto tags
 - Step 5: Persist auto tags in `trackTags`
+- Step 6: Implement user tag input and storage
+- Step 7: Display auto tags and user tags together
 
 Already implemented in `frontend/`:
 
@@ -40,10 +42,13 @@ Already implemented in `frontend/`:
 - on-demand playlist track fetch with pagination
 - market-aware playlist track requests
 - artist genre fetch in 50-ID batches
+- artist genre cache in localStorage for repeated lookups
 - in-memory auto-tag preparation that preserves stored `trackTags.auto`
 - localStorage persistence for newly generated automatic tags only
+- per-track user tag add/remove with duplicate prevention
+- combined auto-tag and user-tag display in track rows
 
-The next implementation target is Step 6.
+The next implementation target is Step 8.
 
 ---
 
@@ -331,7 +336,9 @@ For Step 4 and Step 5:
 
 - derive artist IDs from the normalized track objects
 - fetch artist genres from Spotify in batches of up to 50 IDs
-- if Spotify rejects the bulk artist endpoint, fall back to per-artist requests before failing Step 4
+- cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
+- save artist genre cache incrementally so partial success is preserved even if a later request is rate-limited
+- if Spotify rejects a bulk artist chunk with `403`, cache that chunk as empty genres instead of retrying per artist
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
 - persist newly generated auto tags during Step 5
@@ -430,7 +437,7 @@ Required scope:
 
 Implement user tag input and storage.
 
-Status: next
+Status: complete
 
 Required scope:
 
@@ -442,6 +449,8 @@ Required scope:
 ### Step 7
 
 Display auto tags and user tags together.
+
+Status: complete
 
 Required scope:
 

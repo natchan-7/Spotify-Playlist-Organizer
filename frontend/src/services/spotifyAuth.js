@@ -24,6 +24,22 @@ const SPOTIFY_SCOPES = [
   "user-read-private",
 ].join(" ");
 
+async function parseJsonSafely(response) {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {
+      message: text,
+    };
+  }
+}
+
 function getClientId() {
   return import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 }
@@ -144,10 +160,14 @@ export async function exchangeCodeForToken() {
     body,
   });
 
-  const payload = await response.json();
+  const payload = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const message = payload?.error_description || payload?.error || "Token exchange failed.";
+    const message =
+      payload?.error_description ||
+      payload?.error ||
+      payload?.message ||
+      "Token exchange failed.";
     throw new Error(message);
   }
 
