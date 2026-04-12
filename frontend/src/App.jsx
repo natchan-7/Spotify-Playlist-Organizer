@@ -115,6 +115,8 @@ function getMarketFromBrowser() {
 }
 
 function App() {
+  const repositoryUrl = "https://github.com/natchan-7/Spotify-Playlist-Organizer";
+  const readmeUrl = `${repositoryUrl}#readme`;
   const [session, setSession] = useState(() => getSpotifySession());
   const [authStatus, setAuthStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -743,6 +745,7 @@ function App() {
   return (
     <AuthPage
       authStatus={authStatus}
+      readmeUrl={readmeUrl}
       errorMessage={errorMessage}
       isAuthenticated={Boolean(session?.accessToken)}
       onLogin={handleLogin}
