@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import AuthPage from "./pages/AuthPage";
 import {
+  addTracksToPlaylist,
+  createPlaylist,
   fetchArtistGenres,
   fetchCurrentUserPlaylists,
   fetchCurrentUserProfile,
@@ -98,6 +100,9 @@ function App() {
   const [tagStorageStatus, setTagStorageStatus] = useState("idle");
   const [tagStorageError, setTagStorageError] = useState("");
   const [tagStorageSummary, setTagStorageSummary] = useState(null);
+  const [playlistCreationStatus, setPlaylistCreationStatus] = useState("idle");
+  const [playlistCreationError, setPlaylistCreationError] = useState("");
+  const [createdPlaylist, setCreatedPlaylist] = useState(null);
   const redirectUri = getSpotifyRedirectUri();
 
   const selectedPlaylist =
@@ -158,6 +163,9 @@ function App() {
     setTagStorageStatus("idle");
     setTagStorageError("");
     setTagStorageSummary(null);
+    setPlaylistCreationStatus("idle");
+    setPlaylistCreationError("");
+    setCreatedPlaylist(null);
   }
 
   async function handleLogin() {
@@ -191,6 +199,9 @@ function App() {
       setTagStorageStatus("idle");
       setTagStorageError("");
       setTagStorageSummary(null);
+      setPlaylistCreationStatus("idle");
+      setPlaylistCreationError("");
+      setCreatedPlaylist(null);
       return;
     }
 
@@ -269,6 +280,9 @@ function App() {
       setTagStorageStatus("idle");
       setTagStorageError("");
       setTagStorageSummary(null);
+      setPlaylistCreationStatus("idle");
+      setPlaylistCreationError("");
+      setCreatedPlaylist(null);
       return;
     }
 
@@ -282,6 +296,9 @@ function App() {
       setTagStorageStatus("idle");
       setTagStorageError("");
       setTagStorageSummary(null);
+      setPlaylistCreationStatus("idle");
+      setPlaylistCreationError("");
+      setCreatedPlaylist(null);
 
       try {
         const nextTracks = await fetchPlaylistTracks(
@@ -311,6 +328,9 @@ function App() {
           setTagStorageStatus("idle");
           setTagStorageError("");
           setTagStorageSummary(null);
+          setPlaylistCreationStatus("idle");
+          setPlaylistCreationError("");
+          setCreatedPlaylist(null);
         }
       }
     }
@@ -532,6 +552,105 @@ function App() {
     }
   }
 
+  async function handleCreatePlaylistFromUserTag({
+    sourcePlaylist,
+    userTag,
+    playlistName,
+    isPublic,
+  }) {
+    if (!session?.accessToken) {
+      return {
+        ok: false,
+        reason: "auth",
+        message: "Spotify session expired. Please log in again.",
+      };
+    }
+
+    if (!currentUserId) {
+      return {
+        ok: false,
+        reason: "profile",
+        message: "Current Spotify user id is unavailable. Log out and try again.",
+      };
+    }
+
+    const normalizedTag = typeof userTag === "string" ? userTag.trim() : "";
+    const normalizedPlaylistName =
+      typeof playlistName === "string" ? playlistName.trim() : "";
+
+    if (!sourcePlaylist?.id || !normalizedTag || !normalizedPlaylistName) {
+      return {
+        ok: false,
+        reason: "validation",
+        message: "Playlist source, user tag, and playlist name are required.",
+      };
+    }
+
+    const matchingTracks = tracks.filter((track) =>
+      (track.userTags || []).some(
+        (tag) => tag.toLowerCase() === normalizedTag.toLowerCase()
+      )
+    );
+    const matchingUris = matchingTracks
+      .map((track) => track.uri)
+      .filter(Boolean);
+
+    if (matchingUris.length === 0) {
+      return {
+        ok: false,
+        reason: "empty",
+        message: "No Spotify track URIs matched this user tag yet.",
+      };
+    }
+
+    setPlaylistCreationStatus("loading");
+    setPlaylistCreationError("");
+    setCreatedPlaylist(null);
+
+    try {
+      const nextPlaylist = await createPlaylist(session.accessToken, currentUserId, {
+        name: normalizedPlaylistName,
+        description: `Created from "${sourcePlaylist.name}" using the user tag "${normalizedTag}".`,
+        isPublic,
+      });
+
+      await addTracksToPlaylist(
+        session.accessToken,
+        nextPlaylist.id,
+        matchingUris
+      );
+
+      const summary = {
+        ...nextPlaylist,
+        matchedTrackCount: matchingTracks.length,
+        addedTrackCount: matchingUris.length,
+        userTag: normalizedTag,
+      };
+
+      setCreatedPlaylist(summary);
+      setPlaylistCreationStatus("success");
+
+      return {
+        ok: true,
+        playlist: summary,
+      };
+    } catch (error) {
+      const message = getSpotifyApiErrorMessage(
+        error,
+        "Failed to create the Spotify playlist from this user tag."
+      );
+      setPlaylistCreationError(message);
+      setPlaylistCreationStatus("error");
+      setCreatedPlaylist(null);
+
+      return {
+        ok: false,
+        reason: "request",
+        message,
+      };
+    }
+  }
+
   return (
     <AuthPage
       authStatus={authStatus}
@@ -555,6 +674,10 @@ function App() {
       tracks={tracks}
       tracksError={tracksError}
       tracksStatus={tracksStatus}
+      playlistCreationStatus={playlistCreationStatus}
+      playlistCreationError={playlistCreationError}
+      createdPlaylist={createdPlaylist}
+      onCreatePlaylistFromUserTag={handleCreatePlaylistFromUserTag}
       onAddUserTag={handleAddUserTag}
       onRemoveUserTag={handleRemoveUserTag}
       onSelectPlaylist={handleSelectPlaylist}

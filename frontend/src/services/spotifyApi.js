@@ -403,3 +403,73 @@ export async function fetchArtistGenres(accessToken, artistIds) {
     ...fetchedArtistGenresByArtistId,
   };
 }
+
+async function postSpotifyJson(url, accessToken, body, fallbackMessage) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      ...createAuthorizedHeaders(accessToken),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const payload = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    const retryAfter = response.headers.get("Retry-After");
+    let message =
+      payload?.error?.message ||
+      payload?.message ||
+      fallbackMessage ||
+      "Spotify request failed.";
+
+    if (response.status === 429) {
+      message = retryAfter
+        ? `Spotify rate limit reached. Wait about ${retryAfter} seconds and try again.`
+        : "Spotify rate limit reached. Wait a moment and try again.";
+    }
+
+    const error = new Error(message);
+    error.status = response.status;
+    error.retryAfter = retryAfter ? Number(retryAfter) : null;
+    throw error;
+  }
+
+  return payload;
+}
+
+export async function createPlaylist(accessToken, userId, details) {
+  const payload = await postSpotifyJson(
+    `${SPOTIFY_API_URL}/users/${userId}/playlists`,
+    accessToken,
+    {
+      name: details.name,
+      description: details.description || "",
+      public: Boolean(details.isPublic),
+    },
+    "Failed to create the Spotify playlist."
+  );
+
+  return {
+    id: payload.id,
+    name: payload.name || details.name,
+    spotifyUrl: payload.external_urls?.spotify || "",
+  };
+}
+
+export async function addTracksToPlaylist(accessToken, playlistId, uris) {
+  const normalizedUris = uris.filter((uri) => typeof uri === "string" && uri);
+
+  for (let index = 0; index < normalizedUris.length; index += 100) {
+    const chunk = normalizedUris.slice(index, index + 100);
+
+    await postSpotifyJson(
+      `${SPOTIFY_API_URL}/playlists/${playlistId}/tracks`,
+      accessToken,
+      {
+        uris: chunk,
+      },
+      "Failed to add tracks to the Spotify playlist."
+    );
+  }
+}

@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import AuthStatusCard from "../components/AuthStatusCard";
 import PlaylistCollection from "../components/PlaylistCollection";
+import PlaylistCreationPanel from "../components/PlaylistCreationPanel";
 import PlaylistTracks from "../components/PlaylistTracks";
 
 function AuthPage(props) {
@@ -30,6 +31,15 @@ function AuthPage(props) {
           tracksStatus={props.tracksStatus}
           onAddUserTag={props.onAddUserTag}
           onRemoveUserTag={props.onRemoveUserTag}
+        />
+        <PlaylistCreationPanel
+          createdPlaylist={props.createdPlaylist}
+          onCreatePlaylistFromUserTag={props.onCreatePlaylistFromUserTag}
+          playlistCreationError={props.playlistCreationError}
+          playlistCreationStatus={props.playlistCreationStatus}
+          selectedPlaylist={props.selectedPlaylist}
+          tracks={props.tracks}
+          tracksStatus={props.tracksStatus}
         />
       </div>
     </main>

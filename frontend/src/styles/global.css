@@ -460,6 +460,37 @@ code {
   font-size: 0.82rem;
 }
 
+.playlist-create-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.playlist-create-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.playlist-create-label {
+  color: #bfd0e6;
+  font-size: 0.9rem;
+}
+
+.playlist-create-input,
+.playlist-create-select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.9rem;
+  color: #eef4fb;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.playlist-create-select option {
+  color: #061017;
+}
+
 .notice.error {
   border-color: rgba(255, 115, 115, 0.28);
   background: rgba(255, 115, 115, 0.08);
