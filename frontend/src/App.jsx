@@ -604,9 +604,10 @@ function App() {
     }
   }
 
-  async function handleCreatePlaylistFromUserTag({
+  async function handleCreatePlaylistFromTag({
     sourcePlaylist,
-    userTag,
+    tagType,
+    tagValue,
     playlistName,
     isPublic,
   }) {
@@ -618,7 +619,8 @@ function App() {
       };
     }
 
-    const normalizedTag = typeof userTag === "string" ? userTag.trim() : "";
+    const normalizedTagType = tagType === "auto" ? "auto" : "user";
+    const normalizedTag = typeof tagValue === "string" ? tagValue.trim() : "";
     const normalizedPlaylistName =
       typeof playlistName === "string" ? playlistName.trim() : "";
     const requiredScope = isPublic
@@ -629,7 +631,7 @@ function App() {
       return {
         ok: false,
         reason: "validation",
-        message: "Playlist source, user tag, and playlist name are required.",
+        message: "Playlist source, tag selection, and playlist name are required.",
       };
     }
 
@@ -642,7 +644,7 @@ function App() {
     }
 
     const matchingTracks = tracks.filter((track) =>
-      (track.userTags || []).some(
+      (normalizedTagType === "auto" ? track.autoTags : track.userTags || []).some(
         (tag) => tag.toLowerCase() === normalizedTag.toLowerCase()
       )
     );
@@ -654,7 +656,7 @@ function App() {
       return {
         ok: false,
         reason: "empty",
-        message: "No Spotify track URIs matched this user tag yet.",
+        message: "No Spotify track URIs matched this tag yet.",
       };
     }
 
@@ -665,7 +667,7 @@ function App() {
     try {
       const nextPlaylist = await createPlaylist(session.accessToken, {
         name: normalizedPlaylistName,
-        description: `Created from "${sourcePlaylist.name}" using the user tag "${normalizedTag}".`,
+        description: `Created from "${sourcePlaylist.name}" using the ${normalizedTagType} tag "${normalizedTag}".`,
         isPublic,
       });
 
@@ -679,7 +681,9 @@ function App() {
         ...nextPlaylist,
         matchedTrackCount: matchingTracks.length,
         addedTrackCount: matchingUris.length,
-        userTag: normalizedTag,
+        tagType: normalizedTagType,
+        tagTypeLabel: normalizedTagType === "auto" ? "automatic" : "user",
+        tagValue: normalizedTag,
       };
 
       setCreatedPlaylist(summary);
@@ -692,8 +696,8 @@ function App() {
     } catch (error) {
       const message = getSpotifyApiErrorMessage(
         error,
-        "Failed to create the Spotify playlist from this user tag.",
-      "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
+        "Failed to create the Spotify playlist from this tag.",
+        "Spotify returned Forbidden while creating the playlist. Log out and log in again so Spotify grants playlist modification access, then confirm this account is allowed in your Spotify app settings."
       );
       setPlaylistCreationError(message);
       setPlaylistCreationStatus("error");
@@ -715,6 +719,8 @@ function App() {
 
   function handleClearArtistGenreCache() {
     clearStoredArtistGenreCache();
+    setGenreStatus("idle");
+    setGenreError("");
     setBrowserDataNotice(
       "Cleared cached artist genres. The next playlist view can fetch fresh genre data."
     );
@@ -723,6 +729,12 @@ function App() {
   function handleClearStoredTrackTags() {
     clearStoredTrackTags();
     setTracks(mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId, {}));
+    setTagStorageStatus("idle");
+    setTagStorageError("");
+    setTagStorageSummary(null);
+    setPlaylistCreationStatus("idle");
+    setPlaylistCreationError("");
+    setCreatedPlaylist(null);
     setBrowserDataNotice(
       "Cleared saved track tags in this browser. User tags were removed from local storage."
     );
@@ -758,7 +770,7 @@ function App() {
       browserDataNotice={browserDataNotice}
       onClearArtistGenreCache={handleClearArtistGenreCache}
       onClearStoredTrackTags={handleClearStoredTrackTags}
-      onCreatePlaylistFromUserTag={handleCreatePlaylistFromUserTag}
+      onCreatePlaylistFromTag={handleCreatePlaylistFromTag}
       onResetPlaylistCreationState={handleResetPlaylistCreationState}
       onAddUserTag={handleAddUserTag}
       onRemoveUserTag={handleRemoveUserTag}

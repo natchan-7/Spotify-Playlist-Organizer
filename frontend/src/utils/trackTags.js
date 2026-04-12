@@ -24,6 +24,26 @@ function normalizeGenreTags(genres) {
   );
 }
 
+function normalizeFallbackArtistTag(name) {
+  if (typeof name !== "string") {
+    return "";
+  }
+
+  const normalizedName = name.trim().replace(/\s+/g, " ");
+
+  if (!normalizedName) {
+    return "";
+  }
+
+  const blockedNames = new Set(["unknown artist", "various artists"]);
+
+  if (blockedNames.has(normalizedName.toLowerCase())) {
+    return "";
+  }
+
+  return normalizedName;
+}
+
 function normalizeUserTagInput(userTag) {
   if (typeof userTag !== "string") {
     return "";
@@ -41,7 +61,15 @@ function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
     return artistGenresByArtistId?.[artist.id] || [];
   });
 
-  return normalizeGenreTags(genres);
+  const normalizedGenres = normalizeGenreTags(genres);
+
+  if (normalizedGenres.length > 0) {
+    return normalizedGenres;
+  }
+
+  return dedupeTextList(
+    (track.artists || []).map((artist) => normalizeFallbackArtistTag(artist?.name))
+  );
 }
 
 export function getStoredTrackTagsMap() {

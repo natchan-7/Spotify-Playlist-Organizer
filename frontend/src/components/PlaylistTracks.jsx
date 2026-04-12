@@ -30,6 +30,10 @@ function formatTagLabel(tag) {
     return "";
   }
 
+  if (/[A-Z]/.test(tag)) {
+    return tag;
+  }
+
   return tag
     .split(/[\s-]+/)
     .filter(Boolean)
@@ -203,8 +207,8 @@ function PlaylistTracks({
           <div className="notice">
             <p>No automatic genre tags were added to this playlist.</p>
             <p>
-              Spotify accepted the artist lookup, but it did not return usable
-              genre metadata for these artists.
+              Spotify did not return usable genres, and there were no artist-name
+              fallback tags available for these tracks.
             </p>
           </div>
         )}

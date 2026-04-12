@@ -16,7 +16,7 @@ Current status: Step 9 is implemented.
 - Add and remove per-track user tags with immediate `localStorage` updates
 - Display automatic tags and user tags together in each track row
 - Cache artist genre lookups in `localStorage` to reduce Spotify rate-limit errors
-- Create a new Spotify playlist from tracks filtered by a selected user tag
+- Create a new Spotify playlist from tracks filtered by a selected automatic or user tag
 - Review and clear cached browser data for artist genres and saved tags
 
 Setup:
@@ -45,11 +45,12 @@ Step 9 notes:
 - Artist genres are fetched from Spotify in chunks of up to 50 artist IDs, and `403` artist chunks are cached as empty results instead of retrying per artist
 - Artist genre results are cached in `localStorage` for repeated playlist views so the app can reuse earlier lookups
 - Even if Spotify rate-limits a later artist lookup, already fetched artist genres stay cached for the next retry
+- When Spotify returns no usable genres, automatic tags fall back to normalized artist names so the UI still has a useful starting point
 - Only missing `trackTags.auto` arrays are persisted; existing automatic tags are never overwritten
 - The browser may legitimately save `0` new automatic tags when Spotify returns no usable artist genres
 - User tags are added per track, duplicates are prevented, and removals update browser storage immediately
 - User tags are intentionally stored separately from `auto` tags under the same `trackTags` entry
-- New playlists are created from the currently selected playlist's user tags, then matching track URIs are added in batches of up to 100 through Spotify's playlist items endpoint
+- New playlists are created from the currently selected playlist's automatic or user tags, then matching track URIs are added in batches of up to 100 through Spotify's playlist items endpoint
 - Playlist creation uses Spotify's current `POST /me/playlists` endpoint rather than the deprecated user-id variant
 - The Step 8 panel now auto-selects available user tags, clears stale creation messages when inputs change, and surfaces success details more clearly
 - The Step 9 panel exposes browser-side cache counts and lets the user clear artist genre cache or saved track tags without leaving the app

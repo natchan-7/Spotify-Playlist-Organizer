@@ -49,7 +49,7 @@ Already implemented in `frontend/`:
 - localStorage persistence for newly generated automatic tags only
 - per-track user tag add/remove with duplicate prevention
 - combined auto-tag and user-tag display in track rows
-- playlist creation flow for tracks filtered by a selected user tag
+- playlist creation flow for tracks filtered by a selected automatic or user tag
 - browser-data management panel for cached genres and saved tags
 
 The core implementation is complete. Step 9 adds browser-data controls, and any further work is optional polish only.
@@ -343,6 +343,7 @@ For Step 4 and Step 5:
 - cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
 - save artist genre cache incrementally so partial success is preserved even if a later request is rate-limited
 - if Spotify rejects a bulk artist chunk with `403`, cache that chunk as empty genres instead of retrying per artist
+- if Spotify returns no usable genres for a track, generate fallback auto tags from normalized artist names
 - generate auto tags only when `trackTags[trackId].auto` is missing or empty
 - never overwrite existing auto tags that are already stored
 - persist newly generated auto tags during Step 5
@@ -469,6 +470,7 @@ Status: complete
 Required scope:
 
 - filter by `userTags`
+- allow filtering by either `autoTags` or `userTags`
 - create playlist with Spotify API
 - add matching track URIs to the new playlist
 
