@@ -30,6 +30,7 @@ Completed:
 - Step 5: Persist auto tags in `trackTags`
 - Step 6: Implement user tag input and storage
 - Step 7: Display auto tags and user tags together
+- Step 8: Create a new playlist from tracks filtered by a selected user tag
 
 Already implemented in `frontend/`:
 
@@ -47,8 +48,9 @@ Already implemented in `frontend/`:
 - localStorage persistence for newly generated automatic tags only
 - per-track user tag add/remove with duplicate prevention
 - combined auto-tag and user-tag display in track rows
+- playlist creation flow for tracks filtered by a selected user tag
 
-The next implementation target is Step 8.
+The core implementation is complete. Further work is optional polish only.
 
 ---
 
@@ -292,8 +294,8 @@ Current and planned endpoints:
 - `GET /me/playlists`
 - `GET /playlists/{id}/tracks`
 - `GET /artists?ids=...`
-- `POST /users/{user_id}/playlists`
-- `POST /playlists/{id}/tracks`
+- `POST /me/playlists`
+- `POST /playlists/{id}/items`
 
 Rules:
 
@@ -459,6 +461,8 @@ Required scope:
 ### Step 8
 
 Create a new playlist from tracks filtered by a selected user tag.
+
+Status: complete
 
 Required scope:
 
