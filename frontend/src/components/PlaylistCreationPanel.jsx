@@ -21,6 +21,8 @@ function PlaylistCreationPanel({
 }) {
   const [selectedTagType, setSelectedTagType] = useState("user");
   const [selectedTagValue, setSelectedTagValue] = useState("");
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
+  const [isTagMenuOpen, setIsTagMenuOpen] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
   const [visibility, setVisibility] = useState("private");
   const [formError, setFormError] = useState("");
@@ -52,6 +54,17 @@ function PlaylistCreationPanel({
 
   const availableTagOptions =
     selectedTagType === "auto" ? availableAutoTags : availableUserTags;
+  const filteredTagOptions = useMemo(() => {
+    const normalizedQuery = tagSearchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return availableTagOptions;
+    }
+
+    return availableTagOptions.filter((tag) =>
+      tag.toLowerCase().includes(normalizedQuery)
+    );
+  }, [availableTagOptions, tagSearchQuery]);
 
   const matchedTracks = useMemo(() => {
     if (!selectedTagValue) {
@@ -68,6 +81,8 @@ function PlaylistCreationPanel({
   useEffect(() => {
     setSelectedTagType("user");
     setSelectedTagValue("");
+    setTagSearchQuery("");
+    setIsTagMenuOpen(false);
     setPlaylistName("");
     setVisibility("private");
     setFormError("");
@@ -93,6 +108,7 @@ function PlaylistCreationPanel({
   useEffect(() => {
     if (availableTagOptions.length === 0) {
       setSelectedTagValue("");
+      setTagSearchQuery("");
       return;
     }
 
@@ -102,6 +118,10 @@ function PlaylistCreationPanel({
         : availableTagOptions[0]
     );
   }, [availableTagOptions]);
+
+  useEffect(() => {
+    setTagSearchQuery(selectedTagValue);
+  }, [selectedTagValue]);
 
   useEffect(() => {
     if (!selectedTagValue) {
@@ -148,14 +168,36 @@ function PlaylistCreationPanel({
 
   function updateSelectedTagType(nextTagType) {
     setSelectedTagType(nextTagType);
+    setIsTagMenuOpen(false);
     setFormError("");
     onResetPlaylistCreationState?.();
   }
 
   function updateSelectedTagValue(nextTag) {
     setSelectedTagValue(nextTag);
+    setTagSearchQuery(nextTag);
+    setIsTagMenuOpen(false);
     setFormError("");
     onResetPlaylistCreationState?.();
+  }
+
+  function updateTagSearchQuery(nextQuery) {
+    setTagSearchQuery(nextQuery);
+    setIsTagMenuOpen(true);
+
+    const exactMatch = availableTagOptions.find(
+      (tag) => tag.toLowerCase() === nextQuery.trim().toLowerCase()
+    );
+
+    setSelectedTagValue(exactMatch || "");
+    setFormError("");
+    onResetPlaylistCreationState?.();
+  }
+
+  function handleTagInputBlur() {
+    window.setTimeout(() => {
+      setIsTagMenuOpen(false);
+    }, 120);
   }
 
   function updatePlaylistName(nextPlaylistName) {
@@ -235,22 +277,52 @@ function PlaylistCreationPanel({
             <span className="playlist-create-label">
               {selectedTagType === "auto" ? "Automatic tag" : "User tag"}
             </span>
-            <select
-              className="playlist-create-select"
-              value={selectedTagValue}
-              onChange={(event) => updateSelectedTagValue(event.target.value)}
-            >
-              <option value="">
-                {selectedTagType === "auto"
-                  ? "Select an automatic tag"
-                  : "Select a user tag"}
-              </option>
-              {availableTagOptions.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
+            <div className="tag-search-field">
+              <input
+                className="playlist-create-input"
+                type="text"
+                value={tagSearchQuery}
+                onChange={(event) => updateTagSearchQuery(event.target.value)}
+                onFocus={() => setIsTagMenuOpen(true)}
+                onBlur={handleTagInputBlur}
+                placeholder={
+                  selectedTagType === "auto"
+                    ? "Search automatic tags"
+                    : "Search user tags"
+                }
+                aria-label={
+                  selectedTagType === "auto"
+                    ? "Search automatic tags"
+                    : "Search user tags"
+                }
+              />
+              {isTagMenuOpen && (
+                <div className="tag-search-results">
+                  {filteredTagOptions.length > 0 ? (
+                    filteredTagOptions.slice(0, 8).map((tag) => (
+                      <button
+                        key={tag}
+                        className={`tag-search-option${
+                          tag === selectedTagValue ? " tag-search-option-selected" : ""
+                        }`}
+                        type="button"
+                        onMouseDown={() => updateSelectedTagValue(tag)}
+                      >
+                        {tag}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="tag-search-empty">No matching tags found.</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <span className="playlist-create-help">
+              {filteredTagOptions.length} match{filteredTagOptions.length === 1 ? "" : "es"}
+              {availableTagOptions.length > filteredTagOptions.length
+                ? ` out of ${availableTagOptions.length}`
+                : ""}
+            </span>
           </label>
 
           <label className="playlist-create-field">
