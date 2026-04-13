@@ -13,12 +13,11 @@ import {
   clearSpotifySession,
   exchangeCodeForToken,
   getSpotifyRedirectUri,
-  getSpotifySession,
+  getValidSpotifySession,
   hasAuthCallbackParams,
 } from "./services/spotifyAuth";
 import {
   clearStoredArtistGenreCache,
-  getStoredArtistGenreCache,
 } from "./utils/storage";
 import {
   addUserTagToTrack,
@@ -26,7 +25,6 @@ import {
   getStoredTrackTagsMap,
   mergeAutoTagsIntoTracks,
   mergeTrackTagsIntoTracks,
-  persistGeneratedAutoTags,
   removeUserTagFromTrack,
 } from "./utils/trackTags";
 
@@ -69,18 +67,13 @@ function hasSpotifyScope(session, requiredScope) {
 }
 
 function createBrowserDataSummary() {
-  const artistGenreCache = getStoredArtistGenreCache();
   const trackTagsMap = getStoredTrackTagsMap();
   const trackTagEntries = Object.values(trackTagsMap).filter(
     (entry) => entry && typeof entry === "object"
   );
 
   return {
-    artistGenreCacheCount: Object.keys(artistGenreCache).length,
     trackTagEntryCount: Object.keys(trackTagsMap).length,
-    autoTagEntryCount: trackTagEntries.filter(
-      (entry) => Array.isArray(entry.auto) && entry.auto.length > 0
-    ).length,
     userTagEntryCount: trackTagEntries.filter(
       (entry) => Array.isArray(entry.user) && entry.user.length > 0
     ).length,
@@ -114,10 +107,16 @@ function getMarketFromBrowser() {
   return "";
 }
 
+function createMissingSessionError() {
+  const error = new Error("Spotify のログイン期限が切れました。もう一度ログインしてください。");
+  error.status = 401;
+  return error;
+}
+
 function App() {
   const repositoryUrl = "https://github.com/natchan-7/Spotify-Playlist-Organizer";
   const readmeUrl = `${repositoryUrl}#readme`;
-  const [session, setSession] = useState(() => getSpotifySession());
+  const [session, setSession] = useState(null);
   const [authStatus, setAuthStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [playlists, setPlaylists] = useState([]);
@@ -145,6 +144,65 @@ function App() {
   const selectedPlaylist =
     playlists.find((playlist) => playlist.id === selectedPlaylistId) || null;
   const browserDataSummary = createBrowserDataSummary();
+
+  async function ensureSession() {
+    const nextSession = await getValidSpotifySession();
+
+    if (!nextSession?.accessToken) {
+      setSession(null);
+      return null;
+    }
+
+    setSession((currentSession) => {
+      if (
+        currentSession?.accessToken === nextSession.accessToken &&
+        currentSession?.refreshToken === nextSession.refreshToken &&
+        currentSession?.expiresAt === nextSession.expiresAt &&
+        currentSession?.scope === nextSession.scope
+      ) {
+        return currentSession;
+      }
+
+      return nextSession;
+    });
+
+    return nextSession;
+  }
+
+  useEffect(() => {
+    if (hasAuthCallbackParams()) {
+      return;
+    }
+
+    let ignore = false;
+
+    async function hydrateSession() {
+      try {
+        const nextSession = await getValidSpotifySession();
+
+        if (!ignore) {
+          setSession(nextSession);
+        }
+      } catch (error) {
+        if (!ignore) {
+          clearSpotifySession();
+          setSession(null);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Spotify セッションを復元できませんでした。"
+          );
+          setAuthStatus("error");
+        }
+      }
+    }
+
+    hydrateSession();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasAuthCallbackParams()) {
@@ -254,9 +312,15 @@ function App() {
       setPlaylistsError("");
 
       try {
+        const activeSession = await ensureSession();
+
+        if (!activeSession?.accessToken) {
+          throw createMissingSessionError();
+        }
+
         const [profileResult, playlistsResult] = await Promise.allSettled([
-          fetchCurrentUserProfile(session.accessToken),
-          fetchCurrentUserPlaylists(session.accessToken),
+          fetchCurrentUserProfile(activeSession.accessToken),
+          fetchCurrentUserPlaylists(activeSession.accessToken),
         ]);
 
         if (playlistsResult.status !== "fulfilled") {
@@ -347,8 +411,14 @@ function App() {
       setBrowserDataNotice("");
 
       try {
+        const activeSession = await ensureSession();
+
+        if (!activeSession?.accessToken) {
+          throw createMissingSessionError();
+        }
+
         const nextTracks = await fetchPlaylistTracks(
-          session.accessToken,
+          activeSession.accessToken,
           selectedPlaylist,
           currentUserMarket
         );
@@ -448,39 +518,27 @@ function App() {
       setGenreError("");
 
       try {
+        const activeSession = await ensureSession();
+
+        if (!activeSession?.accessToken) {
+          throw createMissingSessionError();
+        }
+
         const artistGenresByArtistId = await fetchArtistGenres(
-          session.accessToken,
+          activeSession.accessToken,
           artistIds
         );
 
         if (!ignore) {
-          let nextTrackTagsMap = getStoredTrackTagsMap();
+          const nextTrackTagsMap = getStoredTrackTagsMap();
           setArtistGenresByArtistId(artistGenresByArtistId);
-
-          try {
-            const persistenceResult = persistGeneratedAutoTags(
-              rawTracks,
-              artistGenresByArtistId,
-              nextTrackTagsMap
-            );
-
-            nextTrackTagsMap = persistenceResult.trackTagsMap;
-            setTagStorageStatus("success");
-            setTagStorageError("");
-            setTagStorageSummary({
-              updatedTrackCount: persistenceResult.updatedTrackCount,
-              savedAutoTagCount: persistenceResult.savedAutoTagCount,
-              createdEntryCount: persistenceResult.createdEntryCount,
-            });
-          } catch (error) {
-            const message =
-              error instanceof Error
-                ? error.message
-                : "自動タグをブラウザに保存できませんでした。";
-            setTagStorageStatus("error");
-            setTagStorageError(message);
-            setTagStorageSummary(null);
-          }
+          setTagStorageStatus("success");
+          setTagStorageError("");
+          setTagStorageSummary({
+            updatedTrackCount: 0,
+            savedAutoTagCount: 0,
+            createdEntryCount: 0,
+          });
 
           setTracks(
             mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId, nextTrackTagsMap)
@@ -613,7 +671,22 @@ function App() {
     playlistName,
     isPublic,
   }) {
-    if (!session?.accessToken) {
+    let activeSession;
+
+    try {
+      activeSession = await ensureSession();
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "auth",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Spotify のログイン期限が切れました。もう一度ログインしてください。",
+      };
+    }
+
+    if (!activeSession?.accessToken) {
       return {
         ok: false,
         reason: "auth",
@@ -637,7 +710,7 @@ function App() {
       };
     }
 
-    if (!hasSpotifyScope(session, requiredScope)) {
+    if (!hasSpotifyScope(activeSession, requiredScope)) {
       return {
         ok: false,
         reason: "scope",
@@ -667,14 +740,14 @@ function App() {
     setCreatedPlaylist(null);
 
     try {
-      const nextPlaylist = await createPlaylist(session.accessToken, {
+      const nextPlaylist = await createPlaylist(activeSession.accessToken, {
         name: normalizedPlaylistName,
         description: `「${sourcePlaylist.name}」から ${normalizedTagType === "auto" ? "自動" : "手動"}タグ「${normalizedTag}」で作成`,
         isPublic,
       });
 
       await addTracksToPlaylist(
-        session.accessToken,
+        activeSession.accessToken,
         nextPlaylist.id,
         matchingUris
       );
@@ -724,7 +797,7 @@ function App() {
     setGenreStatus("idle");
     setGenreError("");
     setBrowserDataNotice(
-      "アーティスト情報キャッシュを削除しました。次にプレイリストを開くと最新情報を取得します。"
+      "このブラウザに残っていたアーティスト情報キャッシュを削除しました。"
     );
   }
 
@@ -738,7 +811,7 @@ function App() {
     setPlaylistCreationError("");
     setCreatedPlaylist(null);
     setBrowserDataNotice(
-      "このブラウザに保存されていたタグを削除しました。手動タグもローカル保存から消去されました。"
+      "このブラウザに保存されていた手動タグを削除しました。"
     );
   }
 

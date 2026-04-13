@@ -11,7 +11,7 @@ The app must:
 - fetch tracks for a selected playlist
 - generate auto tags from artist genres
 - allow manual user tags
-- persist tags in localStorage
+- persist manual tags in localStorage
 - create a new Spotify playlist from filtered tracks
 
 This file is the canonical implementation guide for all future steps.
@@ -27,7 +27,7 @@ Completed:
 - Step 2: Fetch and display playlists
 - Step 3: Fetch and display tracks for the selected playlist
 - Step 4: Fetch artist genres and prepare auto tags
-- Step 5: Persist auto tags in `trackTags`
+- Step 5: Keep auto tags ephemeral and persist manual tags only
 - Step 6: Implement user tag input and storage
 - Step 7: Display auto tags and user tags together
 - Step 8: Create a new playlist from tracks filtered by a selected user tag
@@ -38,19 +38,19 @@ Already implemented in `frontend/`:
 - React 18 + Vite app
 - Spotify Authorization Code with PKCE
 - access token exchange on callback
+- refresh-token based session renewal
 - Spotify session persistence in localStorage
 - playlist fetch with pagination
 - normalized playlist cards with artwork, owner, visibility, track count, and Spotify link
 - on-demand playlist track fetch with pagination
 - market-aware playlist track requests
 - artist genre fetch in 50-ID batches
-- artist genre cache in localStorage for repeated lookups
-- in-memory auto-tag preparation that preserves stored `trackTags.auto`
-- localStorage persistence for newly generated automatic tags only
+- in-memory auto-tag preparation without long-term Spotify metadata cache
+- localStorage persistence for manual tags only
 - per-track user tag add/remove with duplicate prevention
 - combined auto-tag and user-tag display in track rows
 - playlist creation flow for tracks filtered by a selected automatic or user tag
-- browser-data management panel for cached genres and saved tags
+- browser-data management panel for saved manual tags and legacy cache cleanup
 
 The core implementation is complete. Step 9 adds browser-data controls, and any further work is optional polish only.
 
@@ -73,8 +73,8 @@ The core implementation is complete. Step 9 adds browser-data controls, and any 
 - No database
 - No server-side rendering
 - No Cloudflare Functions for app logic
-- No refresh token flow
 - No storage of Spotify data in any place other than browser memory/localStorage/sessionStorage
+- Do not long-term cache Spotify metadata such as artist genres or generated auto tags
 - Do not add libraries unless the existing code clearly cannot support the next step without them
 
 ### Architecture Principles
@@ -124,6 +124,8 @@ Behavior:
 
 - if `VITE_SPOTIFY_REDIRECT_URI` is missing, use `window.location.origin + window.location.pathname`
 - the redirect URI must be registered in the Spotify app settings
+- redirect URIs must use HTTPS unless the app is running on a loopback IP such as `http://127.0.0.1`
+- do not use `http://localhost`
 - missing `VITE_SPOTIFY_CLIENT_ID` is a user-facing configuration error, not a silent failure
 
 ---
@@ -136,7 +138,13 @@ Do not use:
 
 - Implicit Grant
 - backend token exchange
-- refresh tokens
+- Client Secret in frontend code
+
+Refresh tokens:
+
+- store the refresh token with the session data
+- refresh the access token before expiry when possible
+- if refresh fails, clear the session and require the user to log in again
 
 ### Spotify Scopes
 
@@ -164,6 +172,7 @@ Local storage:
 ```js
 {
   accessToken: string,
+  refreshToken: string,
   tokenType: string,
   scope: string,
   expiresAt: number
@@ -172,7 +181,7 @@ Local storage:
 
 Rules:
 
-- clear expired sessions before using them
+- refresh expiring sessions before using them when a refresh token is available
 - clear PKCE verifier and state after callback handling
 - remove auth query params after processing the callback
 - the callback flow must be safe under React StrictMode remount behavior
@@ -253,6 +262,7 @@ Rules:
 - do not store full track payloads inside `trackTags`
 - do not change this key name
 - do not change this nested shape
+- persist only `user` tags long-term; keep `auto` empty in browser storage unless a future rule explicitly allows otherwise
 
 ### Normalized Track Object
 
@@ -305,7 +315,10 @@ Rules:
 - always send the bearer token from `spotifySession.accessToken`
 - normalize Spotify responses before rendering
 - preserve pagination support for playlist and track endpoints
+- implement backoff retry for `429` responses and respect the `Retry-After` header when present
 - fail with clear user-facing errors when Spotify returns an error payload
+- do not use deprecated endpoints
+- use the official Spotify OpenAPI schema as the source of truth for paths, parameters, and response fields
 
 ### Playlist Fetch Rules
 
@@ -341,13 +354,10 @@ For Step 4 and Step 5:
 
 - derive artist IDs from the normalized track objects
 - fetch artist genres from Spotify in batches of up to 50 IDs
-- cache artist genre results in browser storage so repeated playlist views do not refetch the same artists
-- save artist genre cache incrementally so partial success is preserved even if a later request is rate-limited
-- if Spotify rejects a bulk artist chunk with `403`, cache that chunk as empty genres instead of retrying per artist
+- if Spotify rejects a bulk artist chunk with `403`, treat that chunk as empty genres instead of retrying per artist
 - if Spotify returns no usable genres for a track, generate fallback auto tags from normalized artist names
-- generate auto tags only when `trackTags[trackId].auto` is missing or empty
-- never overwrite existing auto tags that are already stored
-- persist newly generated auto tags during Step 5
+- generate auto tags in memory from the current Spotify response
+- do not persist Spotify-derived auto tags or artist-genre caches beyond immediate use
 - allow Step 5 to save zero new tags when Spotify returns no usable genres
 
 ---
@@ -483,9 +493,9 @@ Status: complete
 
 Required scope:
 
-- show browser-side counts for artist genre cache and saved track tags
-- allow clearing artist genre cache
-- allow clearing saved track tags
+- show browser-side counts for saved manual tags and legacy cache cleanup
+- allow clearing any legacy artist cache left from older builds
+- allow clearing saved manual tags
 
 ---
 

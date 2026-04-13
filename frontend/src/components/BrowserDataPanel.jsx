@@ -14,7 +14,7 @@ function BrowserDataPanel({
           <p className="eyebrow">ブラウザデータ</p>
           <h2>保存データの管理</h2>
           <p className="panel-subtitle">
-            このブラウザに保存されているタグやアーティスト情報を確認できます。
+            このブラウザに保存されている手動タグや旧キャッシュを確認できます。
           </p>
         </div>
       </div>
@@ -29,16 +29,8 @@ function BrowserDataPanel({
         <>
           <div className="creation-summary-grid">
             <div className="creation-summary-card">
-              <span className="creation-summary-label">アーティスト情報キャッシュ</span>
-              <strong>{browserDataSummary.artistGenreCacheCount}</strong>
-            </div>
-            <div className="creation-summary-card">
-              <span className="creation-summary-label">保存済み楽曲データ</span>
+              <span className="creation-summary-label">保存済みタグデータ</span>
               <strong>{browserDataSummary.trackTagEntryCount}</strong>
-            </div>
-            <div className="creation-summary-card">
-              <span className="creation-summary-label">自動タグ付き楽曲</span>
-              <strong>{browserDataSummary.autoTagEntryCount}</strong>
             </div>
             <div className="creation-summary-card">
               <span className="creation-summary-label">手動タグ付き楽曲</span>
@@ -58,14 +50,14 @@ function BrowserDataPanel({
               type="button"
               onClick={onClearArtistGenreCache}
             >
-              アーティスト情報キャッシュを削除
+              旧アーティストキャッシュを削除
             </button>
             <button
               className="secondary-button"
               type="button"
               onClick={onClearStoredTrackTags}
             >
-              保存済みタグを削除
+              保存済み手動タグを削除
             </button>
           </div>
         </>

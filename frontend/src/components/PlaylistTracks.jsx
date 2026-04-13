@@ -245,23 +245,11 @@ function PlaylistTracks({
         tracksStatus === "success" &&
         genreStatus === "success" &&
         tagStorageStatus === "success" &&
-        tagStorageSummary?.updatedTrackCount > 0 && (
-          <div className="notice">
-            <p>
-              {tagStorageSummary.updatedTrackCount}曲分、合計{tagStorageSummary.savedAutoTagCount}個の自動タグをこのブラウザに保存しました。
-            </p>
-          </div>
-        )}
-
-      {selectedPlaylist &&
-        tracksStatus === "success" &&
-        genreStatus === "success" &&
-        tagStorageStatus === "success" &&
-        tagStorageSummary &&
-        tagStorageSummary.updatedTrackCount === 0 &&
         taggedTrackCount > 0 && (
           <div className="notice">
-            <p>表示中の楽曲の自動タグは、すでにこのブラウザに保存されています。</p>
+            <p>
+              自動タグは Spotify の情報から都度生成しており、このブラウザには長期保存していません。
+            </p>
           </div>
         )}
 
@@ -271,7 +259,7 @@ function PlaylistTracks({
         tagStorageStatus === "error" &&
         tagStorageError && (
           <div className="notice error">
-            <p>自動タグは作成できましたが、このブラウザへの保存に失敗しました。</p>
+            <p>自動タグの準備中に問題が発生しました。</p>
             <p>{tagStorageError}</p>
           </div>
         )}
