@@ -27,22 +27,22 @@ async function parseJsonSafely(response) {
   }
 }
 
-function createPlaylistTracksHref(playlist) {
-  if (playlist.tracks?.href) {
-    return playlist.tracks.href;
-  }
-
+function createPlaylistItemsHref(playlist) {
   if (playlist.items?.href) {
     return playlist.items.href;
+  }
+
+  if (playlist.tracks?.href) {
+    return playlist.tracks.href;
   }
 
   if (!playlist.href) {
     return "";
   }
 
-  return playlist.href.endsWith("/tracks")
+  return playlist.href.endsWith("/items")
     ? playlist.href
-    : `${playlist.href.replace(/\/$/, "")}/tracks`;
+    : `${playlist.href.replace(/\/$/, "")}/items`;
 }
 
 function normalizePlaylist(playlist) {
@@ -78,7 +78,7 @@ function normalizePlaylist(playlist) {
     totalTracks: Number.isFinite(normalizedTotalTracks)
       ? normalizedTotalTracks
       : 0,
-    tracksHref: createPlaylistTracksHref(playlist),
+    tracksHref: createPlaylistItemsHref(playlist),
     isPublic: Boolean(playlist.public),
     isCollaborative: Boolean(playlist.collaborative),
     spotifyUrl: playlist.external_urls?.spotify || "",
@@ -114,7 +114,7 @@ async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
   return payload;
 }
 
-async function fetchPlaylistTrackTotal(accessToken, playlist) {
+async function fetchPlaylistItemsTotal(accessToken, playlist) {
   if (!playlist.tracksHref) {
     return playlist.totalTracks;
   }
@@ -156,7 +156,7 @@ export async function fetchCurrentUserPlaylists(accessToken) {
         return playlist;
       }
 
-      const totalTracks = await fetchPlaylistTrackTotal(accessToken, playlist);
+      const totalTracks = await fetchPlaylistItemsTotal(accessToken, playlist);
 
       return {
         ...playlist,
@@ -223,7 +223,7 @@ function normalizeTrackItem(item) {
   };
 }
 
-function getPlaylistTracksUrl(playlist) {
+function getPlaylistItemsUrl(playlist) {
   if (playlist.tracksHref) {
     return playlist.tracksHref;
   }
@@ -232,12 +232,12 @@ function getPlaylistTracksUrl(playlist) {
     return "";
   }
 
-  return `${SPOTIFY_API_URL}/playlists/${playlist.id}/tracks`;
+  return `${SPOTIFY_API_URL}/playlists/${playlist.id}/items`;
 }
 
 export async function fetchPlaylistTracks(accessToken, playlist, market) {
   const tracks = [];
-  const baseUrl = getPlaylistTracksUrl(playlist);
+  const baseUrl = getPlaylistItemsUrl(playlist);
 
   if (!baseUrl) {
     return tracks;

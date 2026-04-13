@@ -228,6 +228,7 @@ Rules:
 
 - keep this shape stable
 - playlist cards and later track fetch flows should use this normalized object
+- `tracksHref` keeps its existing property name for compatibility, but should prefer the playlist `items` endpoint URL
 - if playlist track totals are missing or zero, a lightweight fallback request may be used to recover the total
 - `ownerId` is required because Step 3 needs to distinguish user-owned playlists from followed playlists that may reject track access
 
@@ -294,7 +295,7 @@ Use Spotify Web API directly from the frontend.
 Current and planned endpoints:
 
 - `GET /me/playlists`
-- `GET /playlists/{id}/tracks`
+- `GET /playlists/{id}/items`
 - `GET /artists?ids=...`
 - `POST /me/playlists`
 - `POST /playlists/{id}/items`
@@ -332,7 +333,7 @@ Do not:
 
 - eagerly fetch tracks for every playlist during Step 3
 - couple playlist list rendering to track fetch logic
-- assume every playlist visible in `/me/playlists` will allow `/playlists/{id}/tracks`
+- assume every playlist visible in `/me/playlists` will allow `/playlists/{id}/items`
 
 ### Genre Fetch Rules
 
