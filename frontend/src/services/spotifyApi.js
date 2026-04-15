@@ -1,6 +1,7 @@
 const SPOTIFY_API_URL = "https://api.spotify.com/v1";
 const MAX_RATE_LIMIT_RETRIES = 3;
 const BASE_BACKOFF_MS = 500;
+let shouldFetchArtistGenresIndividually = false;
 
 function createAuthorizedHeaders(accessToken) {
   return {
@@ -348,6 +349,15 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
 
   for (let index = 0; index < artistIds.length; index += 50) {
     const chunk = artistIds.slice(index, index + 50);
+
+    if (shouldFetchArtistGenresIndividually) {
+      Object.assign(
+        artistGenresByArtistId,
+        await fetchArtistGenresIndividually(accessToken, chunk)
+      );
+      continue;
+    }
+
     const url = new URL(`${SPOTIFY_API_URL}/artists`);
 
     url.searchParams.set("ids", chunk.join(","));
@@ -364,6 +374,7 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
       );
     } catch (error) {
       if (error instanceof Error && error.status === 403) {
+        shouldFetchArtistGenresIndividually = true;
         Object.assign(
           artistGenresByArtistId,
           await fetchArtistGenresIndividually(accessToken, chunk)
