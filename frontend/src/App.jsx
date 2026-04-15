@@ -42,7 +42,7 @@ function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessage) {
   if (status === 403) {
     return (
       forbiddenMessage ||
-      "Spotify からアクセスを拒否されました。ログアウトして再ログインし、Spotify アプリ設定のアクセス権も確認してください。"
+      "Spotify 側でこの操作が許可されていません。開発モードの許可ユーザー設定や、Spotify アカウントの権限を確認してください。"
     );
   }
 
@@ -434,7 +434,7 @@ function App() {
           const message = getSpotifyApiErrorMessage(
             error,
             "プレイリストの楽曲を取得できませんでした。",
-            "Spotify では、自分が所有しているか共同編集しているプレイリストのみ楽曲を取得できます。"
+            "Spotify 側の制限により、このプレイリストの楽曲は取得できません。自分が所有しているか共同編集しているプレイリストを選んでください。"
           );
           setTracks([]);
           setTracksError(message);
@@ -551,7 +551,7 @@ function App() {
           const message = getSpotifyApiErrorMessage(
             error,
             "アーティスト情報を取得できませんでした。",
-            "アーティスト情報の取得を Spotify に拒否されました。楽曲表示はできますが、現在のセッションまたはアプリ設定では追加情報を取得できません。"
+            "Spotify 側の制限により、追加のアーティスト情報を取得できませんでした。楽曲表示は続けられますが、自動タグや集計は一部弱くなります。"
           );
           setTracks(mergeTrackTagsIntoTracks(rawTracks));
           setGenreError(message);
@@ -772,7 +772,7 @@ function App() {
       const message = getSpotifyApiErrorMessage(
         error,
         "このタグから Spotify プレイリストを作成できませんでした。",
-        "プレイリスト作成を Spotify に拒否されました。ログアウトして再ログインし、Spotify アプリ設定でこのアカウントが許可されているか確認してください。"
+        "Spotify 側の制限により、プレイリストを作成できませんでした。開発モードの許可ユーザー設定か、ログイン中アカウントの権限を確認してください。"
       );
       setPlaylistCreationError(message);
       setPlaylistCreationStatus("error");

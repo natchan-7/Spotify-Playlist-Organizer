@@ -251,6 +251,9 @@ function normalizeTrackItem(item) {
     artists: (track.artists || []).map((artist) => ({
       id: artist.id,
       name: artist.name,
+      spotifyUrl:
+        artist.external_urls?.spotify ||
+        (artist.id ? `https://open.spotify.com/artist/${artist.id}` : ""),
     })),
     autoTags: [],
     userTags: [],

@@ -407,6 +407,15 @@ code {
   overflow-wrap: anywhere;
 }
 
+.track-artist-link {
+  color: #9ce7b5;
+  text-decoration: none;
+}
+
+.track-artist-link:hover {
+  text-decoration: underline;
+}
+
 .track-tag-row {
   display: flex;
   flex-wrap: wrap;
@@ -617,6 +626,91 @@ code {
   margin-top: 1.5rem;
 }
 
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.insight-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(141, 183, 255, 0.16);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.insight-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.insight-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.insight-card-header p {
+  margin: 0.25rem 0 0;
+  color: #9fb1c9;
+  font-size: 0.85rem;
+}
+
+.insight-chip-list,
+.artist-insight-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.insight-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(30, 215, 96, 0.16);
+  background: rgba(30, 215, 96, 0.06);
+}
+
+.insight-chip span,
+.artist-insight-body span,
+.insight-empty {
+  color: #bfd0e6;
+}
+
+.insight-chip strong,
+.artist-insight-body strong {
+  color: #eef4fb;
+}
+
+.artist-insight-row {
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(141, 183, 255, 0.14);
+  background: rgba(141, 183, 255, 0.06);
+}
+
+.artist-insight-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.artist-insight-link {
+  font-weight: 600;
+}
+
+.insight-empty {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
 .creation-summary-label {
   color: #9fb1c9;
   font-size: 0.82rem;
@@ -805,7 +899,9 @@ code {
   .track-title-row,
   .user-tag-form,
   .playlist-preview-header,
-  .tag-selection-summary {
+  .tag-selection-summary,
+  .insight-card-header,
+  .artist-insight-body {
     flex-direction: column;
   }
 

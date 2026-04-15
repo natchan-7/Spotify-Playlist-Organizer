@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getTopArtists, getTopAutoTags } from "../utils/playlistInsights";
 
 function formatDuration(durationMs) {
   if (!durationMs) {
@@ -19,6 +20,39 @@ function formatArtists(artists) {
   }
 
   return artists.map((artist) => artist.name).join(", ");
+}
+
+function renderArtists(artists, trackId) {
+  if (!Array.isArray(artists) || artists.length === 0) {
+    return "不明なアーティスト";
+  }
+
+  return artists.map((artist, index) => {
+    const key = `${trackId}-${artist.id || artist.name}-${index}`;
+
+    if (artist.spotifyUrl) {
+      return (
+        <span key={key}>
+          <a
+            className="track-artist-link"
+            href={artist.spotifyUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {artist.name}
+          </a>
+          {index < artists.length - 1 ? ", " : ""}
+        </span>
+      );
+    }
+
+    return (
+      <span key={key}>
+        {artist.name}
+        {index < artists.length - 1 ? ", " : ""}
+      </span>
+    );
+  });
 }
 
 function getTrackArtworkFallback(trackName) {
@@ -60,6 +94,8 @@ function PlaylistTracks({
     (count, track) => count + (track.autoTags?.length || 0),
     0
   );
+  const topAutoTags = useMemo(() => getTopAutoTags(tracks), [tracks]);
+  const topArtists = useMemo(() => getTopArtists(tracks), [tracks]);
   const [tagDrafts, setTagDrafts] = useState({});
   const [tagFeedback, setTagFeedback] = useState({});
 
@@ -216,6 +252,75 @@ function PlaylistTracks({
         </div>
       )}
 
+      {selectedPlaylist && tracksStatus === "success" && tracks.length > 0 && (
+        <div className="insight-grid">
+          <section className="insight-card">
+            <div className="insight-card-header">
+              <div>
+                <h3>ジャンル集計</h3>
+                <p>Spotify のジャンルを優先し、不足時は補助タグも含めて集計します。</p>
+              </div>
+              <span className="playlist-count playlist-count-secondary">
+                上位{topAutoTags.length}件
+              </span>
+            </div>
+            {topAutoTags.length > 0 ? (
+              <div className="insight-chip-list">
+                {topAutoTags.map((entry) => (
+                  <div key={entry.tag} className="insight-chip">
+                    <span>{formatTagLabel(entry.tag)}</span>
+                    <strong>{entry.count}曲</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="insight-empty">
+                自動タグが準備できると、ここに集計を表示します。
+              </p>
+            )}
+          </section>
+
+          <section className="insight-card">
+            <div className="insight-card-header">
+              <div>
+                <h3>主要アーティスト</h3>
+                <p>このプレイリストで出現回数が多いアーティストです。</p>
+              </div>
+              <span className="playlist-count playlist-count-secondary">
+                上位{topArtists.length}組
+              </span>
+            </div>
+            {topArtists.length > 0 ? (
+              <div className="artist-insight-list">
+                {topArtists.map((artist) => (
+                  <div key={artist.id || artist.name} className="artist-insight-row">
+                    <div className="artist-insight-body">
+                      {artist.spotifyUrl ? (
+                        <a
+                          className="track-artist-link artist-insight-link"
+                          href={artist.spotifyUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {artist.name}
+                        </a>
+                      ) : (
+                        <strong>{artist.name}</strong>
+                      )}
+                      <span>{artist.count}曲に登場</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="insight-empty">
+                楽曲のアーティスト情報が読めると、ここに一覧を表示します。
+              </p>
+            )}
+          </section>
+        </div>
+      )}
+
       {selectedPlaylist &&
         tracksStatus === "success" &&
         tracks.length > 0 &&
@@ -308,7 +413,11 @@ function PlaylistTracks({
                     {formatDuration(track.durationMs)}
                   </span>
                 </div>
-                <p className="track-meta">{formatArtists(track.artists)}</p>
+                <p className="track-meta">
+                  {Array.isArray(track.artists) && track.artists.length > 0
+                    ? renderArtists(track.artists, track.id)
+                    : formatArtists(track.artists)}
+                </p>
                 <p className="track-meta">{track.album}</p>
                 {(track.autoTags?.length > 0 || track.userTags?.length > 0) && (
                   <div className="track-tag-row">
