@@ -1,4 +1,42 @@
 const TRACK_TAGS_KEY = "trackTags";
+const BLOCKED_ARTIST_NAMES = new Set(["unknown artist", "various artists"]);
+const GENRE_BROAD_TAG_RULES = [
+  { tag: "pop", patterns: [/\bpop\b/i] },
+  { tag: "rock", patterns: [/\brock\b/i] },
+  { tag: "indie", patterns: [/\bindie\b/i] },
+  { tag: "hip hop", patterns: [/\bhip[\s-]?hop\b/i, /\btrap\b/i] },
+  { tag: "rap", patterns: [/\brap\b/i] },
+  {
+    tag: "electronic",
+    patterns: [
+      /\belectronic\b/i,
+      /\bedm\b/i,
+      /\bhouse\b/i,
+      /\btechno\b/i,
+      /\btrance\b/i,
+      /\bdnb\b/i,
+      /\bdrum(?:\s|&)bass\b/i,
+      /\bdrum n bass\b/i,
+    ],
+  },
+  { tag: "jazz", patterns: [/\bjazz\b/i] },
+  { tag: "classical", patterns: [/\bclassical\b/i, /\borchestral\b/i, /\bsymphon/i] },
+  { tag: "folk", patterns: [/\bfolk\b/i, /\bsinger-songwriter\b/i] },
+  { tag: "soul", patterns: [/\bsoul\b/i, /\br&b\b/i, /\brnb\b/i] },
+  { tag: "metal", patterns: [/\bmetal\b/i] },
+  { tag: "punk", patterns: [/\bpunk\b/i] },
+  { tag: "latin", patterns: [/\blatin\b/i, /\breggaeton\b/i, /\bbossa\b/i, /\bsamba\b/i] },
+  { tag: "anime", patterns: [/\banime\b/i] },
+];
+const TRACK_CONTEXT_TAG_RULES = [
+  { tag: "acoustic", patterns: [/\bacoustic\b/i, /アコースティック/] },
+  { tag: "live", patterns: [/\blive\b/i, /ライブ/] },
+  { tag: "remix", patterns: [/\bremix\b/i, /\brework\b/i, /\bedit\b/i] },
+  { tag: "instrumental", patterns: [/\binstrumental\b/i, /インスト/] },
+  { tag: "piano", patterns: [/\bpiano\b/i, /ピアノ/] },
+  { tag: "remaster", patterns: [/\bremaster(?:ed)?\b/i, /リマスター/] },
+  { tag: "demo", patterns: [/\bdemo\b/i] },
+];
 
 function createEmptyTags() {
   return {
@@ -54,6 +92,54 @@ function normalizeGenreTags(genres) {
   );
 }
 
+function normalizeAutoTagValue(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function createAutoTagDetail(value, source) {
+  const normalizedValue = normalizeAutoTagValue(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return {
+    value: normalizedValue,
+    source,
+  };
+}
+
+function dedupeAutoTagDetails(details) {
+  const uniqueDetailsByValue = new Map();
+
+  details.forEach((detail) => {
+    if (!detail?.value) {
+      return;
+    }
+
+    if (!uniqueDetailsByValue.has(detail.value)) {
+      uniqueDetailsByValue.set(detail.value, detail);
+    }
+  });
+
+  return Array.from(uniqueDetailsByValue.values());
+}
+
+function matchRuleTags(text, rules, source) {
+  if (typeof text !== "string" || !text.trim()) {
+    return [];
+  }
+
+  return rules
+    .filter((rule) => rule.patterns.some((pattern) => pattern.test(text)))
+    .map((rule) => createAutoTagDetail(rule.tag, source))
+    .filter(Boolean);
+}
+
 function normalizeFallbackArtistTag(name) {
   if (typeof name !== "string") {
     return "";
@@ -65,9 +151,7 @@ function normalizeFallbackArtistTag(name) {
     return "";
   }
 
-  const blockedNames = new Set(["unknown artist", "various artists"]);
-
-  if (blockedNames.has(normalizedName.toLowerCase())) {
+  if (BLOCKED_ARTIST_NAMES.has(normalizedName.toLowerCase())) {
     return "";
   }
 
@@ -82,7 +166,40 @@ function normalizeUserTagInput(userTag) {
   return userTag.trim().replace(/\s+/g, " ");
 }
 
-function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
+function buildArtistFallbackTagDetails(track) {
+  return dedupeAutoTagDetails(
+    (track.artists || [])
+      .map((artist) =>
+        createAutoTagDetail(
+          normalizeFallbackArtistTag(artist?.name),
+          "artist-fallback"
+        )
+      )
+      .filter(Boolean)
+  );
+}
+
+function buildContextualTagDetails(track) {
+  return dedupeAutoTagDetails(
+    [track.name, track.album].flatMap((text) =>
+      matchRuleTags(text, TRACK_CONTEXT_TAG_RULES, "track-context")
+    )
+  );
+}
+
+function buildGenreTagDetails(genres) {
+  const normalizedGenres = normalizeGenreTags(genres);
+  const directGenreDetails = normalizedGenres
+    .map((genre) => createAutoTagDetail(genre, "genre"))
+    .filter(Boolean);
+  const broadGenreDetails = normalizedGenres.flatMap((genre) =>
+    matchRuleTags(genre, GENRE_BROAD_TAG_RULES, "genre-broad")
+  );
+
+  return dedupeAutoTagDetails([...directGenreDetails, ...broadGenreDetails]);
+}
+
+function buildAutoTagDetailsFromTrack(track, artistGenresByArtistId) {
   const genres = (track.artists || []).flatMap((artist) => {
     if (!artist?.id) {
       return [];
@@ -91,15 +208,17 @@ function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
     return artistGenresByArtistId?.[artist.id] || [];
   });
 
-  const normalizedGenres = normalizeGenreTags(genres);
+  const genreTagDetails = buildGenreTagDetails(genres);
+  const contextualTagDetails = buildContextualTagDetails(track);
 
-  if (normalizedGenres.length > 0) {
-    return normalizedGenres;
+  if (genreTagDetails.length > 0) {
+    return dedupeAutoTagDetails([...genreTagDetails, ...contextualTagDetails]);
   }
 
-  return dedupeTextList(
-    (track.artists || []).map((artist) => normalizeFallbackArtistTag(artist?.name))
-  );
+  return dedupeAutoTagDetails([
+    ...buildArtistFallbackTagDetails(track),
+    ...contextualTagDetails,
+  ]);
 }
 
 export function getStoredTrackTagsMap() {
@@ -162,6 +281,9 @@ export function mergeTrackTagsIntoTracks(
     return {
       ...track,
       autoTags: tags.auto,
+      autoTagDetails: tags.auto
+        .map((value) => createAutoTagDetail(value, "stored"))
+        .filter(Boolean),
       userTags: tags.user,
     };
   });
@@ -174,14 +296,17 @@ export function mergeAutoTagsIntoTracks(
 ) {
   return tracks.map((track) => {
     const tags = getTrackTags(track.id, trackTagsMap);
-    const generatedAutoTags =
+    const generatedAutoTagDetails =
       tags.auto.length > 0
         ? tags.auto
-        : buildAutoTagsFromArtistGenres(track, artistGenresByArtistId);
+            .map((value) => createAutoTagDetail(value, "stored"))
+            .filter(Boolean)
+        : buildAutoTagDetailsFromTrack(track, artistGenresByArtistId);
 
     return {
       ...track,
-      autoTags: generatedAutoTags,
+      autoTags: generatedAutoTagDetails.map((detail) => detail.value),
+      autoTagDetails: generatedAutoTagDetails,
       userTags: tags.user,
     };
   });

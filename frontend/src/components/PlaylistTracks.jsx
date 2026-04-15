@@ -257,8 +257,8 @@ function PlaylistTracks({
           <section className="insight-card">
             <div className="insight-card-header">
               <div>
-                <h3>ジャンル集計</h3>
-                <p>Spotify のジャンルを優先し、不足時は補助タグも含めて集計します。</p>
+                <h3>自動タグ集計</h3>
+                <p>Spotify のジャンルに加えて、曲名やアルバム名の補助ルールも含めて集計します。</p>
               </div>
               <span className="playlist-count playlist-count-secondary">
                 上位{topAutoTags.length}件
