@@ -23,6 +23,7 @@ const SPOTIFY_SCOPES = [
   "playlist-modify-public",
   "user-read-private",
 ].join(" ");
+const TOKEN_EXPIRY_SKEW_MS = 60 * 1000;
 
 async function parseJsonSafely(response) {
   const text = await response.text();
@@ -56,14 +57,46 @@ function normalizeRedirectUri(value) {
   return url.toString();
 }
 
+function isLoopbackRedirect(url) {
+  return url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1";
+}
+
+function validateRedirectUri(redirectUri) {
+  const url = new URL(redirectUri);
+
+  if (redirectUri.includes("*")) {
+    throw new Error("Spotify のリダイレクトURIにワイルドカードは使用できません。");
+  }
+
+  if (url.hostname === "localhost") {
+    throw new Error(
+      "Spotify のリダイレクトURIに http://localhost は使用できません。http://127.0.0.1 を使ってください。"
+    );
+  }
+
+  if (url.protocol === "https:") {
+    return redirectUri;
+  }
+
+  if (url.protocol === "http:" && isLoopbackRedirect(url)) {
+    return redirectUri;
+  }
+
+  throw new Error(
+    "Spotify のリダイレクトURIは HTTPS を使用してください。ローカル開発時のみ http://127.0.0.1 が使用できます。"
+  );
+}
+
 export function getSpotifyRedirectUri() {
   const configuredRedirectUri = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
 
   if (configuredRedirectUri) {
-    return normalizeRedirectUri(configuredRedirectUri);
+    return validateRedirectUri(normalizeRedirectUri(configuredRedirectUri));
   }
 
-  return normalizeRedirectUri(window.location.origin + window.location.pathname);
+  return validateRedirectUri(
+    normalizeRedirectUri(window.location.origin + window.location.pathname)
+  );
 }
 
 function ensureAuthConfig() {
@@ -173,6 +206,7 @@ export async function exchangeCodeForToken() {
 
   const session = {
     accessToken: payload.access_token,
+    refreshToken: payload.refresh_token || "",
     tokenType: payload.token_type,
     scope: payload.scope,
     expiresAt: Date.now() + payload.expires_in * 1000,
@@ -189,12 +223,71 @@ export function getSpotifySession() {
     return null;
   }
 
-  if (session.expiresAt && Date.now() >= session.expiresAt) {
+  return session;
+}
+
+export async function refreshSpotifySession(
+  currentSession = getStoredSpotifySession()
+) {
+  if (!currentSession?.refreshToken) {
     clearStoredSpotifySession();
     return null;
   }
 
-  return session;
+  const { clientId } = ensureAuthConfig();
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: "refresh_token",
+    refresh_token: currentSession.refreshToken,
+  });
+
+  const response = await fetch(`${SPOTIFY_ACCOUNTS_URL}/api/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  const payload = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    clearStoredSpotifySession();
+    const message =
+      payload?.error_description ||
+      payload?.error ||
+      payload?.message ||
+      "Spotify セッションの更新に失敗しました。";
+    throw new Error(message);
+  }
+
+  const refreshedSession = {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token || currentSession.refreshToken,
+    tokenType: payload.token_type || currentSession.tokenType,
+    scope: payload.scope || currentSession.scope,
+    expiresAt: Date.now() + payload.expires_in * 1000,
+  };
+
+  saveSpotifySession(refreshedSession);
+  return refreshedSession;
+}
+
+export async function getValidSpotifySession() {
+  const session = getStoredSpotifySession();
+
+  if (!session?.accessToken) {
+    return null;
+  }
+
+  if (
+    Number.isFinite(session.expiresAt) &&
+    Date.now() < session.expiresAt - TOKEN_EXPIRY_SKEW_MS
+  ) {
+    return session;
+  }
+
+  return refreshSpotifySession(session);
 }
 
 export function clearSpotifySession() {

@@ -6,117 +6,95 @@ Spotify のプレイリストを読み込み、曲ごとにタグを付けて、
 
 ## このアプリでできること
 
-手元の Spotify プレイリストを読み込み、曲に自動タグ・手動タグを付けて整理し、そのタグを使って新しいプレイリストを作成できます。
+- Spotify にログインする
+- プレイリスト一覧を見る
+- 選択したプレイリストの曲を確認する
+- アーティスト情報から自動タグを生成する
+- 手動タグを追加、削除する
+- タグで曲を絞り込む
+- 新しいプレイリストを作成する
+- ブラウザに保存された手動タグを削除する
 
 ---
 
-## 主な機能
+## Spotify API 準拠方針
 
-* Spotify にログインする
-* プレイリスト一覧を見る
-* 選択したプレイリストの曲を確認する
-* 自動タグを付ける
-* 手動タグを追加、削除する
-* タグで曲を絞り込む
-* 新しいプレイリストを作成する
-* 保存されたデータの確認・削除
-
----
-
-## 使い方
-
-1. `Spotifyでログイン` を押します
-2. プレイリスト一覧から対象のプレイリストを選択します
-3. 楽曲一覧で自動タグを確認し、必要に応じて手動タグを追加します
-4. `プレイリスト作成` でタグを選び、新しいプレイリストを作成します
-5. `保存データの管理` からデータの削除が可能です
+- 認証方式は Spotify Authorization Code with PKCE を使用します
+- Implicit Grant は使用しません
+- redirect URI は HTTPS を使用します
+  - ローカル開発時のみ `http://127.0.0.1` を使用できます
+  - `http://localhost` は使用しません
+- スコープは必要最小限のみ要求します
+  - `playlist-read-private`
+  - `playlist-read-collaborative`
+  - `playlist-modify-private`
+  - `playlist-modify-public`
+  - `user-read-private`
+- アクセストークン期限切れ時は refresh token でセッションを更新します
+- 429 応答では `Retry-After` を優先し、未指定時は指数バックオフで再試行します
+- 非推奨エンドポイントは使いません
+  - プレイリスト項目取得は `GET /playlists/{id}/items` を使います
+- Spotify 由来のメタデータは長期キャッシュしません
+  - アーティストのジャンル情報や自動タグは都度取得・都度生成します
+- 保存するのはブラウザ上のセッション情報と手動タグのみです
 
 ---
 
 ## 補足
 
-* 自動タグは Spotify のジャンル情報をもとに付与されます
-* ジャンル情報が弱い場合は、アーティスト名を補助タグとして使用します
-* タグやキャッシュはブラウザ内に保存されます
+- 自動タグは Spotify のアーティストジャンル情報をもとに生成します
+- ジャンル情報が弱い場合は、アーティスト名を補助タグとして使用します
+- 自動タグは長期保存せず、表示時に都度生成します
+- 手動タグはこのブラウザの localStorage に保存されます
 
 ---
 
 ## 保存される主なデータ
 
-* Spotify のログイン情報
-* 自動タグと手動タグ
-* アーティスト情報のキャッシュ
+- Spotify セッション情報
+  - access token
+  - refresh token
+  - scope
+  - expiresAt
+- 手動タグ
 
-これらはアプリ内の `保存データの管理` から削除できます。
+Spotify 由来のアーティストキャッシュや自動タグは長期保存しません。
 
 ---
 
-# ⚠️ 利用制限について（重要）
+## 利用制限について
 
 このアプリは Spotify Web API を利用しており、Spotify 側の仕様によりいくつかの制限があります。
-現在の状態では、すべてのユーザーが自由に利用できるわけではありません。
 
----
+### 開発モードによる制限
 
-## 🔐 開発モードによる制限
+- 新規アプリの既定では Development Mode で動作します
+- 開発者が許可したユーザーのみ利用できる場合があります
+- 不特定多数に公開する場合は Extended quota mode の申請が必要です
 
-このアプリは現在、Spotify の **Development Mode（開発モード）** で動作しています。
+### ユーザー認証について
 
-そのため、以下の制限があります：
-
-* 利用できるユーザーは **最大5人まで**
-* 開発者が Spotify Developer Dashboard に登録したユーザーのみ利用可能
-* 登録されていないユーザーはログインしても正常に動作しません
-
----
-
-## 👤 ユーザーごとの認証について
-
-このアプリでは、Spotify のユーザー情報（プレイリストなど）を扱うため、
-**各ユーザーが自分のSpotifyアカウントでログインする必要があります。**
-
----
-
-## 🚫 なぜこの制限があるのか
-
-Spotify の仕様により、ユーザーのプレイリストやライブラリなどのデータは
-**ユーザー本人の許可（OAuth認証）なしでは取得できません。**
-
-また、不特定多数のユーザーに公開するには、
-Spotify の **Extended quota mode（拡張申請）** が必要です。
-
----
-
-## ⚠️ 現状の制約まとめ
-
-* 誰でも自由に使える状態ではない
-* 登録済みユーザーのみ利用可能
-* 最大5人までの制限がある
-* 各ユーザーごとにログインが必要
-
----
-
-## 🚀 今後の対応予定
-
-* Spotify の拡張申請（Extended quota mode）の検討
-* ログイン不要で使える機能の追加（公開プレイリスト対応など）
-* Spotify 以外のデータ入力方法の検討
+- ユーザー固有データを扱うため、各ユーザーが自分の Spotify アカウントでログインする必要があります
 
 ---
 
 ## ローカル開発
 
-ローカルで動かす場合は `frontend/` 配下でセットアップしてください。
+`frontend/` 配下でセットアップしてください。
 
-* Spotify Developers で取得した Client ID が必要です
-* https://developer.spotify.com/dashboard
-* `frontend/.env` を作成
-* `VITE_SPOTIFY_CLIENT_ID` を設定
-* 必要に応じて `VITE_SPOTIFY_REDIRECT_URI` を設定
+- Spotify Developers で取得した Client ID が必要です
+- https://developer.spotify.com/dashboard
+- `frontend/.env` を作成します
+- `VITE_SPOTIFY_CLIENT_ID` を設定します
+- 必要に応じて `VITE_SPOTIFY_REDIRECT_URI` を設定します
 
-### コールバック URL 例
+### redirect URI 例
 
-* `http://127.0.0.1:5173/`
+- `http://127.0.0.1:5173/`
+
+注意:
+- `http://localhost:5173/` は使わないでください
+- 公開環境では HTTPS の redirect URI を登録してください
 
 ---
 
@@ -126,8 +104,20 @@ Cloudflare Worker Builds を使用して公開できます。
 
 ### 推奨設定
 
-* Root directory: `frontend`
-* Build command: `npm run build`
-* Deploy command: `npm run cf:deploy`
-* Version command: `npm run cf:versions`
-* Variables and secrets: `VITE_SPOTIFY_CLIENT_ID`
+- Root directory: `frontend`
+- Build command: `npm run build`
+- Deploy command: `npm run cf:deploy`
+- Version command: `npm run cf:versions`
+- Variables and secrets: `VITE_SPOTIFY_CLIENT_ID`
+
+---
+
+## 参考ドキュメント
+
+- OpenAPI schema: https://developer.spotify.com/reference/web-api/open-api-schema.yaml
+- PKCE: https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow
+- Token refresh: https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens
+- Redirect URI requirements: https://developer.spotify.com/documentation/web-api/concepts/redirect_uri
+- Scopes: https://developer.spotify.com/documentation/web-api/concepts/scopes
+- Rate limits: https://developer.spotify.com/documentation/web-api/concepts/rate-limits
+- Developer Terms: https://developer.spotify.com/terms

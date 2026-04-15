@@ -7,6 +7,36 @@ function createEmptyTags() {
   };
 }
 
+function sanitizeTrackTagsMap(trackTagsMap) {
+  if (!trackTagsMap || typeof trackTagsMap !== "object") {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(trackTagsMap)
+      .map(([trackId, tags]) => {
+        if (!trackId || !tags || typeof tags !== "object") {
+          return null;
+        }
+
+        const userTags = Array.isArray(tags.user) ? dedupeTextList(tags.user) : [];
+
+        if (userTags.length === 0) {
+          return null;
+        }
+
+        return [
+          trackId,
+          {
+            auto: [],
+            user: userTags,
+          },
+        ];
+      })
+      .filter(Boolean)
+  );
+}
+
 function dedupeTextList(values) {
   return Array.from(
     new Set(
@@ -81,7 +111,13 @@ export function getStoredTrackTagsMap() {
 
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" ? parsed : {};
+    const normalized = sanitizeTrackTagsMap(parsed);
+
+    if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
+      saveTrackTagsMap(normalized);
+    }
+
+    return normalized;
   } catch (error) {
     localStorage.removeItem(TRACK_TAGS_KEY);
     return {};
@@ -89,7 +125,14 @@ export function getStoredTrackTagsMap() {
 }
 
 export function saveTrackTagsMap(trackTagsMap) {
-  localStorage.setItem(TRACK_TAGS_KEY, JSON.stringify(trackTagsMap));
+  const normalized = sanitizeTrackTagsMap(trackTagsMap);
+
+  if (Object.keys(normalized).length === 0) {
+    clearStoredTrackTags();
+    return;
+  }
+
+  localStorage.setItem(TRACK_TAGS_KEY, JSON.stringify(normalized));
 }
 
 export function clearStoredTrackTags() {
@@ -149,48 +192,11 @@ export function persistGeneratedAutoTags(
   artistGenresByArtistId,
   trackTagsMap = getStoredTrackTagsMap()
 ) {
-  const nextTrackTagsMap = { ...trackTagsMap };
-  let updatedTrackCount = 0;
-  let savedAutoTagCount = 0;
-  let createdEntryCount = 0;
-
-  tracks.forEach((track) => {
-    const tags = getTrackTags(track.id, nextTrackTagsMap);
-
-    if (tags.auto.length > 0) {
-      return;
-    }
-
-    const generatedAutoTags = buildAutoTagsFromArtistGenres(
-      track,
-      artistGenresByArtistId
-    );
-
-    if (generatedAutoTags.length === 0) {
-      return;
-    }
-
-    if (!nextTrackTagsMap[track.id]) {
-      createdEntryCount += 1;
-    }
-
-    nextTrackTagsMap[track.id] = {
-      auto: generatedAutoTags,
-      user: tags.user,
-    };
-    updatedTrackCount += 1;
-    savedAutoTagCount += generatedAutoTags.length;
-  });
-
-  if (updatedTrackCount > 0) {
-    saveTrackTagsMap(nextTrackTagsMap);
-  }
-
   return {
-    trackTagsMap: nextTrackTagsMap,
-    updatedTrackCount,
-    savedAutoTagCount,
-    createdEntryCount,
+    trackTagsMap,
+    updatedTrackCount: 0,
+    savedAutoTagCount: 0,
+    createdEntryCount: 0,
   };
 }
 
@@ -226,7 +232,7 @@ export function addUserTagToTrack(
   const nextTrackTagsMap = {
     ...trackTagsMap,
     [trackId]: {
-      auto: tags.auto.length > 0 ? tags.auto : dedupeTextList(fallbackAutoTags),
+      auto: [],
       user: [...tags.user, normalizedUserTag],
     },
   };
@@ -237,7 +243,7 @@ export function addUserTagToTrack(
     ok: true,
     trackTagsMap: nextTrackTagsMap,
     userTags: nextTrackTagsMap[trackId].user,
-    autoTags: nextTrackTagsMap[trackId].auto,
+    autoTags: dedupeTextList(fallbackAutoTags),
   };
 }
 
@@ -270,15 +276,14 @@ export function removeUserTagFromTrack(
     };
   }
 
-  const nextAutoTags =
-    tags.auto.length > 0 ? tags.auto : dedupeTextList(fallbackAutoTags);
+  const nextAutoTags = dedupeTextList(fallbackAutoTags);
   const nextTrackTagsMap = { ...trackTagsMap };
 
-  if (nextAutoTags.length === 0 && nextUserTags.length === 0) {
+  if (nextUserTags.length === 0) {
     delete nextTrackTagsMap[trackId];
   } else {
     nextTrackTagsMap[trackId] = {
-      auto: nextAutoTags,
+      auto: [],
       user: nextUserTags,
     };
   }

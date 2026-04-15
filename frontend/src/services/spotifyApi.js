@@ -1,14 +1,42 @@
-import {
-  getStoredArtistGenreCache,
-  saveArtistGenreCache,
-} from "../utils/storage";
-
 const SPOTIFY_API_URL = "https://api.spotify.com/v1";
+const MAX_RATE_LIMIT_RETRIES = 3;
+const BASE_BACKOFF_MS = 500;
 
 function createAuthorizedHeaders(accessToken) {
   return {
     Authorization: `Bearer ${accessToken}`,
   };
+}
+
+function sleep(delayMs) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, delayMs);
+  });
+}
+
+function getRateLimitDelayMs(response, retryCount) {
+  const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return retryAfterSeconds * 1000;
+  }
+
+  return BASE_BACKOFF_MS * 2 ** retryCount;
+}
+
+async function fetchWithSpotifyBackoff(url, options) {
+  let attempt = 0;
+
+  while (true) {
+    const response = await fetch(url, options);
+
+    if (response.status !== 429 || attempt >= MAX_RATE_LIMIT_RETRIES) {
+      return response;
+    }
+
+    await sleep(getRateLimitDelayMs(response, attempt));
+    attempt += 1;
+  }
 }
 
 async function parseJsonSafely(response) {
@@ -25,6 +53,43 @@ async function parseJsonSafely(response) {
       message: text,
     };
   }
+}
+
+function createSpotifyApiError(response, payload, fallbackMessage) {
+  const retryAfter = response.headers.get("Retry-After");
+  let message =
+    payload?.error?.message ||
+    payload?.message ||
+    fallbackMessage ||
+    "Spotify のリクエストに失敗しました。";
+
+  if (response.status === 429) {
+    message = retryAfter
+      ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
+      : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
+  }
+
+  const error = new Error(message);
+  error.status = response.status;
+  error.retryAfter = retryAfter ? Number(retryAfter) : null;
+  return error;
+}
+
+async function fetchSpotifyPage(url, accessToken, fallbackMessage, options = {}) {
+  const response = await fetchWithSpotifyBackoff(url, {
+    ...options,
+    headers: {
+      ...createAuthorizedHeaders(accessToken),
+      ...(options.headers || {}),
+    },
+  });
+  const payload = await parseJsonSafely(response);
+
+  if (!response.ok) {
+    throw createSpotifyApiError(response, payload, fallbackMessage);
+  }
+
+  return payload;
 }
 
 function createPlaylistItemsHref(playlist) {
@@ -85,55 +150,24 @@ function normalizePlaylist(playlist) {
   };
 }
 
-async function fetchSpotifyPage(url, accessToken, fallbackMessage) {
-  const response = await fetch(url, {
-    headers: createAuthorizedHeaders(accessToken),
-  });
-  const payload = await parseJsonSafely(response);
-
-  if (!response.ok) {
-    const retryAfter = response.headers.get("Retry-After");
-    let message =
-      payload?.error?.message ||
-      payload?.message ||
-      fallbackMessage ||
-      "Spotify の情報を取得できませんでした。";
-
-    if (response.status === 429) {
-      message = retryAfter
-        ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
-        : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
-    }
-
-    const error = new Error(message);
-    error.status = response.status;
-    error.retryAfter = retryAfter ? Number(retryAfter) : null;
-    throw error;
-  }
-
-  return payload;
-}
-
 async function fetchPlaylistItemsTotal(accessToken, playlist) {
   if (!playlist.tracksHref) {
     return playlist.totalTracks;
   }
 
-  const url = new URL(playlist.tracksHref);
-  url.searchParams.set("limit", "1");
-
-  const response = await fetch(url.toString(), {
-    headers: createAuthorizedHeaders(accessToken),
-  });
-
-  if (!response.ok) {
+  try {
+    const url = new URL(playlist.tracksHref);
+    url.searchParams.set("limit", "1");
+    const payload = await fetchSpotifyPage(
+      url.toString(),
+      accessToken,
+      "プレイリスト件数を取得できませんでした。"
+    );
+    const totalTracks = Number(payload?.total);
+    return Number.isFinite(totalTracks) ? totalTracks : playlist.totalTracks;
+  } catch (error) {
     return playlist.totalTracks;
   }
-
-  const payload = await parseJsonSafely(response);
-  const totalTracks = Number(payload?.total);
-
-  return Number.isFinite(totalTracks) ? totalTracks : playlist.totalTracks;
 }
 
 export async function fetchCurrentUserPlaylists(accessToken) {
@@ -279,53 +313,8 @@ function createArtistGenresMap(artists) {
   );
 }
 
-function createArtistGenreCacheEntries(artistGenresByArtistId, cachedAt = Date.now()) {
-  return Object.fromEntries(
-    Object.entries(artistGenresByArtistId).map(([artistId, genres]) => [
-      artistId,
-      {
-        genres: Array.isArray(genres) ? genres : [],
-        cachedAt,
-      },
-    ])
-  );
-}
-
-function mergeArtistGenreCacheEntries(artistGenreCache, artistGenresByArtistId) {
-  return {
-    ...artistGenreCache,
-    ...createArtistGenreCacheEntries(artistGenresByArtistId),
-  };
-}
-
-function splitArtistIdsByCache(artistIds, artistGenreCache) {
-  const cachedArtistGenresByArtistId = {};
-  const missingArtistIds = [];
-
-  artistIds.forEach((artistId) => {
-    const cachedEntry = artistGenreCache?.[artistId];
-
-    if (cachedEntry && Array.isArray(cachedEntry.genres)) {
-      cachedArtistGenresByArtistId[artistId] = cachedEntry.genres;
-      return;
-    }
-
-    missingArtistIds.push(artistId);
-  });
-
-  return {
-    cachedArtistGenresByArtistId,
-    missingArtistIds,
-  };
-}
-
-function createEmptyArtistGenresMap(artistIds) {
-  return Object.fromEntries(artistIds.map((artistId) => [artistId, []]));
-}
-
-async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCache) {
+async function fetchArtistGenresInChunks(accessToken, artistIds) {
   const artistGenresByArtistId = {};
-  let nextArtistGenreCache = { ...artistGenreCache };
 
   for (let index = 0; index < artistIds.length; index += 50) {
     const chunk = artistIds.slice(index, index + 50);
@@ -339,30 +328,16 @@ async function fetchArtistGenresInChunks(accessToken, artistIds, artistGenreCach
         accessToken,
         "アーティスト情報を取得できませんでした。"
       );
-      const chunkArtistGenresByArtistId = createArtistGenresMap(payload.artists || []);
-
       Object.assign(
         artistGenresByArtistId,
-        chunkArtistGenresByArtistId
+        createArtistGenresMap(payload.artists || [])
       );
-      nextArtistGenreCache = mergeArtistGenreCacheEntries(
-        nextArtistGenreCache,
-        chunkArtistGenresByArtistId
-      );
-      saveArtistGenreCache(nextArtistGenreCache);
     } catch (error) {
       if (error instanceof Error && error.status === 403) {
-        const emptyArtistGenresByArtistId = createEmptyArtistGenresMap(chunk);
-
         Object.assign(
           artistGenresByArtistId,
-          emptyArtistGenresByArtistId
+          Object.fromEntries(chunk.map((artistId) => [artistId, []]))
         );
-        nextArtistGenreCache = mergeArtistGenreCacheEntries(
-          nextArtistGenreCache,
-          emptyArtistGenresByArtistId
-        );
-        saveArtistGenreCache(nextArtistGenreCache);
         continue;
       }
 
@@ -382,90 +357,23 @@ export async function fetchArtistGenres(accessToken, artistIds) {
     return {};
   }
 
-  const artistGenreCache = getStoredArtistGenreCache();
-  const { cachedArtistGenresByArtistId, missingArtistIds } = splitArtistIdsByCache(
-    normalizedArtistIds,
-    artistGenreCache
-  );
-
-  if (missingArtistIds.length === 0) {
-    return cachedArtistGenresByArtistId;
-  }
-
-  const fetchedArtistGenresByArtistId = await fetchArtistGenresInChunks(
-    accessToken,
-    missingArtistIds,
-    artistGenreCache
-  );
-
-  return {
-    ...cachedArtistGenresByArtistId,
-    ...fetchedArtistGenresByArtistId,
-  };
+  return fetchArtistGenresInChunks(accessToken, normalizedArtistIds);
 }
 
 async function postSpotifyJson(url, accessToken, body, fallbackMessage) {
-  const response = await fetch(url, {
+  return fetchSpotifyPage(url, accessToken, fallbackMessage, {
     method: "POST",
     headers: {
-      ...createAuthorizedHeaders(accessToken),
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
   });
-  const payload = await parseJsonSafely(response);
-
-  if (!response.ok) {
-    const retryAfter = response.headers.get("Retry-After");
-    let message =
-      payload?.error?.message ||
-      payload?.message ||
-      fallbackMessage ||
-      "Spotify へのリクエストに失敗しました。";
-
-    if (response.status === 429) {
-      message = retryAfter
-        ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
-        : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
-    }
-
-    const error = new Error(message);
-    error.status = response.status;
-    error.retryAfter = retryAfter ? Number(retryAfter) : null;
-    throw error;
-  }
-
-  return payload;
 }
 
 async function postSpotifyWithoutJsonBody(url, accessToken, fallbackMessage) {
-  const response = await fetch(url, {
+  return fetchSpotifyPage(url, accessToken, fallbackMessage, {
     method: "POST",
-    headers: createAuthorizedHeaders(accessToken),
   });
-  const payload = await parseJsonSafely(response);
-
-  if (!response.ok) {
-    const retryAfter = response.headers.get("Retry-After");
-    let message =
-      payload?.error?.message ||
-      payload?.message ||
-      fallbackMessage ||
-      "Spotify へのリクエストに失敗しました。";
-
-    if (response.status === 429) {
-      message = retryAfter
-        ? `Spotify のアクセス上限に達しました。約 ${retryAfter} 秒待ってからもう一度試してください。`
-        : "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
-    }
-
-    const error = new Error(message);
-    error.status = response.status;
-    error.retryAfter = retryAfter ? Number(retryAfter) : null;
-    throw error;
-  }
-
-  return payload;
 }
 
 export async function createPlaylist(accessToken, details) {

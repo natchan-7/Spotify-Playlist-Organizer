@@ -1,6 +1,5 @@
 const SPOTIFY_SESSION_KEY = "spotifySession";
 const ARTIST_GENRE_CACHE_KEY = "artistGenreCache";
-const ARTIST_GENRE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 function parseStoredValue(value) {
   if (!value) {
@@ -15,7 +14,20 @@ function parseStoredValue(value) {
 }
 
 export function saveSpotifySession(session) {
-  localStorage.setItem(SPOTIFY_SESSION_KEY, JSON.stringify(session));
+  if (!session || typeof session !== "object") {
+    clearStoredSpotifySession();
+    return;
+  }
+
+  const normalizedSession = {
+    accessToken: typeof session.accessToken === "string" ? session.accessToken : "",
+    refreshToken: typeof session.refreshToken === "string" ? session.refreshToken : "",
+    tokenType: typeof session.tokenType === "string" ? session.tokenType : "",
+    scope: typeof session.scope === "string" ? session.scope : "",
+    expiresAt: Number.isFinite(session.expiresAt) ? session.expiresAt : 0,
+  };
+
+  localStorage.setItem(SPOTIFY_SESSION_KEY, JSON.stringify(normalizedSession));
 }
 
 export function getStoredSpotifySession() {
@@ -34,44 +46,12 @@ export function clearStoredSpotifySession() {
 }
 
 export function getStoredArtistGenreCache() {
-  const parsed = parseStoredValue(localStorage.getItem(ARTIST_GENRE_CACHE_KEY));
-
-  if (!parsed || typeof parsed !== "object") {
-    localStorage.removeItem(ARTIST_GENRE_CACHE_KEY);
-    return {};
-  }
-
-  const now = Date.now();
-  const activeEntries = Object.entries(parsed).filter(([artistId, entry]) => {
-    if (!artistId || !entry || typeof entry !== "object") {
-      return false;
-    }
-
-    if (!Array.isArray(entry.genres)) {
-      return false;
-    }
-
-    if (!Number.isFinite(entry.cachedAt)) {
-      return false;
-    }
-
-    return now - entry.cachedAt < ARTIST_GENRE_CACHE_TTL_MS;
-  });
-
-  const normalizedCache = Object.fromEntries(activeEntries);
-
-  if (activeEntries.length !== Object.keys(parsed).length) {
-    localStorage.setItem(
-      ARTIST_GENRE_CACHE_KEY,
-      JSON.stringify(normalizedCache)
-    );
-  }
-
-  return normalizedCache;
+  clearStoredArtistGenreCache();
+  return {};
 }
 
 export function saveArtistGenreCache(cache) {
-  localStorage.setItem(ARTIST_GENRE_CACHE_KEY, JSON.stringify(cache));
+  clearStoredArtistGenreCache();
 }
 
 export function clearStoredArtistGenreCache() {
