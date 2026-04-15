@@ -316,6 +316,33 @@ function createArtistGenresMap(artists) {
   );
 }
 
+async function fetchArtistGenresIndividually(accessToken, artistIds) {
+  const artistGenresByArtistId = {};
+
+  for (const artistId of artistIds) {
+    try {
+      const payload = await fetchSpotifyPage(
+        `${SPOTIFY_API_URL}/artists/${artistId}`,
+        accessToken,
+        "アーティスト情報を取得できませんでした。"
+      );
+
+      artistGenresByArtistId[artistId] = Array.isArray(payload?.genres)
+        ? payload.genres
+        : [];
+    } catch (error) {
+      if (error instanceof Error && error.status === 403) {
+        artistGenresByArtistId[artistId] = [];
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  return artistGenresByArtistId;
+}
+
 async function fetchArtistGenresInChunks(accessToken, artistIds) {
   const artistGenresByArtistId = {};
 
@@ -339,7 +366,7 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
       if (error instanceof Error && error.status === 403) {
         Object.assign(
           artistGenresByArtistId,
-          Object.fromEntries(chunk.map((artistId) => [artistId, []]))
+          await fetchArtistGenresIndividually(accessToken, chunk)
         );
         continue;
       }
