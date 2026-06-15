@@ -10,14 +10,6 @@ export function formatDuration(durationMs) {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function formatArtists(artists) {
-  if (!Array.isArray(artists) || artists.length === 0) {
-    return "不明なアーティスト";
-  }
-
-  return artists.map((artist) => artist.name).join(", ");
-}
-
 export function formatTagLabel(tag) {
   if (!tag) {
     return "";

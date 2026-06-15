@@ -407,6 +407,14 @@ code {
   overflow-wrap: anywhere;
 }
 
+.track-artist-link {
+  color: #d6e3ff;
+}
+
+.track-artist-link:hover {
+  color: #8db7ff;
+}
+
 .track-tag-row {
   display: flex;
   flex-wrap: wrap;
