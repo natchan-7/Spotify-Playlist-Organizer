@@ -68,6 +68,9 @@ function PlaylistTracks({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArtistId, setSelectedArtistId] = useState("");
   const [sortOrder, setSortOrder] = useState("default");
+  const [selectedTrackIds, setSelectedTrackIds] = useState(() => new Set());
+  const [bulkTagDraft, setBulkTagDraft] = useState("");
+  const [bulkTagFeedback, setBulkTagFeedback] = useState("");
 
   useEffect(() => {
     setTagDrafts({});
@@ -75,6 +78,9 @@ function PlaylistTracks({
     setSearchQuery("");
     setSelectedArtistId("");
     setSortOrder("default");
+    setSelectedTrackIds(new Set());
+    setBulkTagDraft("");
+    setBulkTagFeedback("");
   }, [selectedPlaylist?.id]);
 
   const availableArtists = useMemo(() => {
@@ -118,6 +124,89 @@ function PlaylistTracks({
 
     return filteredTracks;
   }, [filteredTracks, sortOrder]);
+
+  const allVisibleSelected =
+    sortedTracks.length > 0 &&
+    sortedTracks.every((track) => selectedTrackIds.has(track.id));
+
+  function toggleTrackSelection(trackId) {
+    setSelectedTrackIds((currentSelection) => {
+      const nextSelection = new Set(currentSelection);
+
+      if (nextSelection.has(trackId)) {
+        nextSelection.delete(trackId);
+      } else {
+        nextSelection.add(trackId);
+      }
+
+      return nextSelection;
+    });
+    setBulkTagFeedback("");
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedTrackIds((currentSelection) => {
+      const nextSelection = new Set(currentSelection);
+
+      for (const track of sortedTracks) {
+        if (allVisibleSelected) {
+          nextSelection.delete(track.id);
+        } else {
+          nextSelection.add(track.id);
+        }
+      }
+
+      return nextSelection;
+    });
+    setBulkTagFeedback("");
+  }
+
+  function clearSelection() {
+    setSelectedTrackIds(new Set());
+    setBulkTagFeedback("");
+  }
+
+  function handleBulkTagSubmit(event) {
+    event.preventDefault();
+
+    const trimmedTag = bulkTagDraft.trim();
+
+    if (!trimmedTag) {
+      setBulkTagFeedback("タグを入力してください。");
+      return;
+    }
+
+    let addedCount = 0;
+    let duplicateCount = 0;
+    let errorMessage = "";
+
+    for (const trackId of selectedTrackIds) {
+      const result = onAddUserTag?.(trackId, trimmedTag);
+
+      if (result?.ok) {
+        addedCount += 1;
+      } else if (result?.reason === "duplicate") {
+        duplicateCount += 1;
+      } else if (result?.reason === "storage") {
+        errorMessage = result.message || "手動タグをブラウザに保存できませんでした。";
+        break;
+      }
+    }
+
+    if (errorMessage) {
+      setBulkTagFeedback(errorMessage);
+      return;
+    }
+
+    let message = `選択した${selectedTrackIds.size}曲のうち${addedCount}曲に手動タグ「${formatTagLabel(trimmedTag)}」を追加しました。`;
+
+    if (duplicateCount > 0) {
+      message += `（${duplicateCount}曲は追加済みでした）`;
+    }
+
+    setBulkTagFeedback(message);
+    setBulkTagDraft("");
+  }
 
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
@@ -399,9 +488,60 @@ function PlaylistTracks({
         )}
 
       {selectedPlaylist && tracksStatus === "success" && filteredTracks.length > 0 && (
+        <div className="track-bulk-bar">
+          <label className="track-bulk-select-all">
+            <input
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={toggleSelectAllVisible}
+              aria-label="表示中の曲をすべて選択"
+            />
+            <span>表示中の{sortedTracks.length}曲をすべて選択</span>
+          </label>
+
+          {selectedTrackIds.size > 0 && (
+            <form className="track-bulk-tag-form" onSubmit={handleBulkTagSubmit}>
+              <span className="track-bulk-count">{selectedTrackIds.size}曲を選択中</span>
+              <input
+                className="user-tag-input"
+                type="text"
+                value={bulkTagDraft}
+                onChange={(event) => {
+                  setBulkTagDraft(event.target.value);
+                  setBulkTagFeedback("");
+                }}
+                placeholder="選択した曲に追加する手動タグ"
+                aria-label="選択した曲に追加する手動タグ"
+              />
+              <button className="user-tag-add-button" type="submit">
+                選択した曲に追加
+              </button>
+              <button
+                className="secondary-button track-bulk-clear-button"
+                type="button"
+                onClick={clearSelection}
+              >
+                選択を解除
+              </button>
+            </form>
+          )}
+
+          {bulkTagFeedback && <p className="tag-feedback">{bulkTagFeedback}</p>}
+        </div>
+      )}
+
+      {selectedPlaylist && tracksStatus === "success" && filteredTracks.length > 0 && (
         <div className="track-list">
           {sortedTracks.map((track) => (
             <article key={track.id} className="track-row">
+              <label className="track-select">
+                <input
+                  type="checkbox"
+                  checked={selectedTrackIds.has(track.id)}
+                  onChange={() => toggleTrackSelection(track.id)}
+                  aria-label={`${track.name} を選択`}
+                />
+              </label>
               <div className="track-artwork">
                 {track.thumbnailUrl ? (
                   <img

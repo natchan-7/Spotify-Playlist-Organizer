@@ -331,7 +331,7 @@ code {
 
 .track-row {
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: auto 56px 1fr;
   gap: 0.85rem;
   padding: 0.75rem;
   border-radius: 1rem;
@@ -347,6 +347,18 @@ code {
   transform: translateY(-1px);
   border-color: rgba(141, 183, 255, 0.18);
   background: rgba(255, 255, 255, 0.045);
+}
+
+.track-select {
+  display: flex;
+  align-items: center;
+  padding-top: 0.2rem;
+}
+
+.track-select input {
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
 }
 
 .track-artwork {
@@ -674,6 +686,61 @@ code {
   min-width: 180px;
 }
 
+.track-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.track-bulk-select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #bfd0e6;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.track-bulk-select-all input {
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+}
+
+.track-bulk-tag-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 280px;
+}
+
+.track-bulk-count {
+  color: #9fb1c9;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.track-bulk-tag-form .user-tag-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.track-bulk-clear-button {
+  padding: 0.7rem 0.9rem;
+}
+
+.track-bulk-bar .tag-feedback {
+  flex-basis: 100%;
+}
+
 .creation-summary-label {
   color: #9fb1c9;
   font-size: 0.82rem;
@@ -942,11 +1009,23 @@ code {
   }
 
   .track-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
+  }
+
+  .track-row .track-artwork {
+    grid-column: 2;
+  }
+
+  .track-row .track-body {
+    grid-column: 1 / -1;
   }
 
   .track-artwork {
     width: 100%;
     height: 140px;
+  }
+
+  .track-bulk-tag-form {
+    min-width: 0;
   }
 }
