@@ -639,6 +639,24 @@ code {
   margin-top: 1.5rem;
 }
 
+.track-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.track-filter-row .track-search-field {
+  flex: 2;
+  min-width: 220px;
+  margin-top: 0;
+}
+
+.track-artist-filter {
+  flex: 1;
+  min-width: 180px;
+}
+
 .creation-summary-label {
   color: #9fb1c9;
   font-size: 0.82rem;

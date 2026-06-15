@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatDuration, formatTagLabel } from "../utils/formatting";
 
 function getTrackArtworkFallback(trackName) {
@@ -14,6 +14,10 @@ function trackMatchesSearchQuery(track, query) {
   return (track.artists || []).some((artist) =>
     artist?.name?.toLowerCase().includes(query)
   );
+}
+
+function trackMatchesArtist(track, artistId) {
+  return (track.artists || []).some((artist) => artist?.id === artistId);
 }
 
 function ArtistNames({ artists }) {
@@ -62,17 +66,44 @@ function PlaylistTracks({
   const [tagDrafts, setTagDrafts] = useState({});
   const [tagFeedback, setTagFeedback] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedArtistId, setSelectedArtistId] = useState("");
 
   useEffect(() => {
     setTagDrafts({});
     setTagFeedback({});
     setSearchQuery("");
+    setSelectedArtistId("");
   }, [selectedPlaylist?.id]);
 
+  const availableArtists = useMemo(() => {
+    const artistsById = new Map();
+
+    for (const track of tracks) {
+      for (const artist of track.artists || []) {
+        if (artist?.id && !artistsById.has(artist.id)) {
+          artistsById.set(artist.id, artist.name || artist.id);
+        }
+      }
+    }
+
+    return Array.from(artistsById, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name, "ja")
+    );
+  }, [tracks]);
+
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredTracks = normalizedSearchQuery
-    ? tracks.filter((track) => trackMatchesSearchQuery(track, normalizedSearchQuery))
-    : tracks;
+  const isFiltered = Boolean(normalizedSearchQuery) || Boolean(selectedArtistId);
+  const filteredTracks = tracks.filter((track) => {
+    if (normalizedSearchQuery && !trackMatchesSearchQuery(track, normalizedSearchQuery)) {
+      return false;
+    }
+
+    if (selectedArtistId && !trackMatchesArtist(track, selectedArtistId)) {
+      return false;
+    }
+
+    return true;
+  });
 
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
@@ -169,7 +200,7 @@ function PlaylistTracks({
         {tracksStatus === "success" && selectedPlaylist && (
           <div className="track-status-group">
             <span className="playlist-count">
-              {normalizedSearchQuery
+              {isFiltered
                 ? `${filteredTracks.length} / ${tracks.length}曲表示中`
                 : `${tracks.length}曲表示中`}
             </span>
@@ -295,24 +326,41 @@ function PlaylistTracks({
         )}
 
       {selectedPlaylist && tracksStatus === "success" && tracks.length > 0 && (
-        <div className="track-search-field tag-search-field">
-          <input
-            className="playlist-create-input"
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="曲名・アーティスト名で検索"
-            aria-label="楽曲を曲名またはアーティスト名で検索"
-          />
-          {searchQuery && (
-            <button
-              className="tag-search-clear-button"
-              type="button"
-              onClick={() => setSearchQuery("")}
-              aria-label="検索条件をクリア"
+        <div className="track-filter-row">
+          <div className="track-search-field tag-search-field">
+            <input
+              className="playlist-create-input"
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="曲名・アーティスト名で検索"
+              aria-label="楽曲を曲名またはアーティスト名で検索"
+            />
+            {searchQuery && (
+              <button
+                className="tag-search-clear-button"
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="検索条件をクリア"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          {availableArtists.length > 0 && (
+            <select
+              className="playlist-create-select track-artist-filter"
+              value={selectedArtistId}
+              onChange={(event) => setSelectedArtistId(event.target.value)}
+              aria-label="アーティストで楽曲を絞り込む"
             >
-              ×
-            </button>
+              <option value="">すべてのアーティスト</option>
+              {availableArtists.map((artist) => (
+                <option key={artist.id} value={artist.id}>
+                  {artist.name}
+                </option>
+              ))}
+            </select>
           )}
         </div>
       )}
