@@ -67,12 +67,14 @@ function PlaylistTracks({
   const [tagFeedback, setTagFeedback] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArtistId, setSelectedArtistId] = useState("");
+  const [sortOrder, setSortOrder] = useState("default");
 
   useEffect(() => {
     setTagDrafts({});
     setTagFeedback({});
     setSearchQuery("");
     setSelectedArtistId("");
+    setSortOrder("default");
   }, [selectedPlaylist?.id]);
 
   const availableArtists = useMemo(() => {
@@ -104,6 +106,18 @@ function PlaylistTracks({
 
     return true;
   });
+
+  const sortedTracks = useMemo(() => {
+    if (sortOrder === "popularity-desc") {
+      return [...filteredTracks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    }
+
+    if (sortOrder === "popularity-asc") {
+      return [...filteredTracks].sort((a, b) => (a.popularity || 0) - (b.popularity || 0));
+    }
+
+    return filteredTracks;
+  }, [filteredTracks, sortOrder]);
 
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
@@ -362,6 +376,16 @@ function PlaylistTracks({
               ))}
             </select>
           )}
+          <select
+            className="playlist-create-select track-sort-select"
+            value={sortOrder}
+            onChange={(event) => setSortOrder(event.target.value)}
+            aria-label="楽曲の並び順"
+          >
+            <option value="default">標準の順序</option>
+            <option value="popularity-desc">人気度が高い順</option>
+            <option value="popularity-asc">人気度が低い順</option>
+          </select>
         </div>
       )}
 
@@ -376,7 +400,7 @@ function PlaylistTracks({
 
       {selectedPlaylist && tracksStatus === "success" && filteredTracks.length > 0 && (
         <div className="track-list">
-          {filteredTracks.map((track) => (
+          {sortedTracks.map((track) => (
             <article key={track.id} className="track-row">
               <div className="track-artwork">
                 {track.thumbnailUrl ? (
@@ -394,9 +418,17 @@ function PlaylistTracks({
               <div className="track-body">
                 <div className="track-title-row">
                   <h3>{track.name}</h3>
-                  <span className="track-duration">
-                    {formatDuration(track.durationMs)}
-                  </span>
+                  <div className="track-title-meta">
+                    <span
+                      className="track-popularity-badge"
+                      title="Spotify 上の人気度（0〜100）"
+                    >
+                      人気度 {track.popularity}
+                    </span>
+                    <span className="track-duration">
+                      {formatDuration(track.durationMs)}
+                    </span>
+                  </div>
                 </div>
                 <p className="track-meta">
                   <ArtistNames artists={track.artists} />

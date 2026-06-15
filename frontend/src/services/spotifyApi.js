@@ -252,6 +252,7 @@ function normalizeTrackItem(item) {
       id: artist.id,
       name: artist.name,
     })),
+    popularity: Number.isFinite(track.popularity) ? track.popularity : 0,
     autoTags: [],
     userTags: [],
   };

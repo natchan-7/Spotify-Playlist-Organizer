@@ -62,21 +62,42 @@ function PlaylistCreationPanel({
     [tracks]
   );
 
+  const availableArtistNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          tracks.flatMap((track) =>
+            (track.artists || [])
+              .map((artist) => artist?.name)
+              .filter((name) => typeof name === "string" && name)
+          )
+        )
+      ).sort((left, right) => left.localeCompare(right, "ja")),
+    [tracks]
+  );
+
   const availableTagOptions =
-    selectedTagType === "auto" ? availableAutoTags : availableUserTags;
+    selectedTagType === "auto"
+      ? availableAutoTags
+      : selectedTagType === "artist"
+      ? availableArtistNames
+      : availableUserTags;
 
   const tagTrackCounts = useMemo(() => {
     const counts = new Map();
 
     for (const track of tracks) {
-      const tags = (selectedTagType === "auto" ? track.autoTags : track.userTags) || [];
+      const values =
+        selectedTagType === "artist"
+          ? (track.artists || []).map((artist) => artist?.name).filter(Boolean)
+          : (selectedTagType === "auto" ? track.autoTags : track.userTags) || [];
 
-      for (const tag of tags) {
-        if (typeof tag !== "string" || !tag) {
+      for (const value of values) {
+        if (typeof value !== "string" || !value) {
           continue;
         }
 
-        const key = tag.toLowerCase();
+        const key = value.toLowerCase();
         counts.set(key, (counts.get(key) || 0) + 1);
       }
     }
@@ -99,6 +120,14 @@ function PlaylistCreationPanel({
   const matchedTracks = useMemo(() => {
     if (!selectedTagValue) {
       return [];
+    }
+
+    if (selectedTagType === "artist") {
+      return tracks.filter((track) =>
+        (track.artists || []).some(
+          (artist) => artist?.name?.toLowerCase() === selectedTagValue.toLowerCase()
+        )
+      );
     }
 
     return tracks.filter((track) =>
@@ -124,13 +153,15 @@ function PlaylistCreationPanel({
   useEffect(() => {
     if (availableUserTags.length > 0) {
       setSelectedTagType((currentType) =>
-        currentType === "auto" || currentType === "user" ? currentType : "user"
+        currentType === "auto" || currentType === "user" || currentType === "artist"
+          ? currentType
+          : "user"
       );
       return;
     }
 
     if (availableAutoTags.length > 0) {
-      setSelectedTagType("auto");
+      setSelectedTagType((currentType) => (currentType === "artist" ? currentType : "auto"));
       return;
     }
 
@@ -331,7 +362,7 @@ function PlaylistCreationPanel({
           <h2>タグで絞り込んだプレイリストを作成</h2>
           {selectedPlaylist && (
             <p className="panel-subtitle">
-              {selectedPlaylist.name} に付いている自動タグまたは手動タグを使って、新しいプレイリストを作成できます。
+              {selectedPlaylist.name} に付いている自動タグ・手動タグ、またはアーティストを使って、新しいプレイリストを作成できます。
             </p>
           )}
         </div>
@@ -357,7 +388,8 @@ function PlaylistCreationPanel({
       {selectedPlaylist &&
         tracksStatus === "success" &&
         availableUserTags.length === 0 &&
-        availableAutoTags.length === 0 && (
+        availableAutoTags.length === 0 &&
+        availableArtistNames.length === 0 && (
         <div className="notice">
           <p>自動タグの準備を待つか、手動タグを追加してから作成してください。</p>
         </div>
@@ -365,10 +397,12 @@ function PlaylistCreationPanel({
 
       {selectedPlaylist &&
         tracksStatus === "success" &&
-        (availableUserTags.length > 0 || availableAutoTags.length > 0) && (
+        (availableUserTags.length > 0 ||
+          availableAutoTags.length > 0 ||
+          availableArtistNames.length > 0) && (
         <form className="playlist-create-form" onSubmit={handleSubmit}>
           <label className="playlist-create-field">
-            <span className="playlist-create-label">タグの種類</span>
+            <span className="playlist-create-label">条件の種類</span>
             <select
               className="playlist-create-select"
               value={selectedTagType}
@@ -380,12 +414,19 @@ function PlaylistCreationPanel({
               {availableUserTags.length > 0 && (
                 <option value="user">手動タグ</option>
               )}
+              {availableArtistNames.length > 0 && (
+                <option value="artist">アーティスト</option>
+              )}
             </select>
           </label>
 
           <label className="playlist-create-field">
             <span className="playlist-create-label">
-              {selectedTagType === "auto" ? "自動タグ" : "手動タグ"}
+              {selectedTagType === "auto"
+                ? "自動タグ"
+                : selectedTagType === "artist"
+                ? "アーティスト"
+                : "手動タグ"}
             </span>
             <div className="tag-search-field">
               <input
@@ -399,11 +440,15 @@ function PlaylistCreationPanel({
                 placeholder={
                   selectedTagType === "auto"
                     ? "自動タグを検索"
+                    : selectedTagType === "artist"
+                    ? "アーティストを検索"
                     : "手動タグを検索"
                 }
                 aria-label={
                   selectedTagType === "auto"
                     ? "自動タグを検索"
+                    : selectedTagType === "artist"
+                    ? "アーティストを検索"
                     : "手動タグを検索"
                 }
               />
@@ -493,12 +538,20 @@ function PlaylistCreationPanel({
                 <strong>{matchedTracks.length}</strong>
               </div>
               <div className="creation-summary-card">
-                <span className="creation-summary-label">選択中のタグ</span>
+                <span className="creation-summary-label">
+                  選択中の{selectedTagType === "artist" ? "アーティスト" : "タグ"}
+                </span>
                 <strong>{selectedTagValue}</strong>
               </div>
               <div className="creation-summary-card">
-                <span className="creation-summary-label">タグの種類</span>
-                <strong>{selectedTagType === "auto" ? "自動" : "手動"}</strong>
+                <span className="creation-summary-label">条件の種類</span>
+                <strong>
+                  {selectedTagType === "auto"
+                    ? "自動タグ"
+                    : selectedTagType === "artist"
+                    ? "アーティスト"
+                    : "手動タグ"}
+                </strong>
               </div>
               <div className="creation-summary-card">
                 <span className="creation-summary-label">公開設定</span>
@@ -549,7 +602,13 @@ function PlaylistCreationPanel({
           {playlistCreationStatus === "success" && createdPlaylist && (
             <div className="notice success-notice">
               <p>
-                「{createdPlaylist.tagValue}」の{createdPlaylist.tagTypeLabel}タグから
+                {createdPlaylist.tagType === "artist" ? (
+                  <>「{createdPlaylist.tagValue}」の楽曲から</>
+                ) : (
+                  <>
+                    「{createdPlaylist.tagValue}」の{createdPlaylist.tagTypeLabel}タグから
+                  </>
+                )}
                 「{createdPlaylist.name}」を作成しました。
               </p>
               <p>

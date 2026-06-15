@@ -618,7 +618,7 @@ function App() {
       };
     }
 
-    const normalizedTagType = tagType === "auto" ? "auto" : "user";
+    const normalizedTagType = ["auto", "artist"].includes(tagType) ? tagType : "user";
     const normalizedTag = typeof tagValue === "string" ? tagValue.trim() : "";
     const normalizedPlaylistName =
       typeof playlistName === "string" ? playlistName.trim() : "";
@@ -642,11 +642,18 @@ function App() {
       };
     }
 
-    const matchingTracks = tracks.filter((track) =>
-      (normalizedTagType === "auto" ? track.autoTags : track.userTags || []).some(
-        (tag) => tag.toLowerCase() === normalizedTag.toLowerCase()
-      )
-    );
+    const matchingTracks =
+      normalizedTagType === "artist"
+        ? tracks.filter((track) =>
+            (track.artists || []).some(
+              (artist) => artist?.name?.toLowerCase() === normalizedTag.toLowerCase()
+            )
+          )
+        : tracks.filter((track) =>
+            (normalizedTagType === "auto" ? track.autoTags : track.userTags || []).some(
+              (tag) => tag.toLowerCase() === normalizedTag.toLowerCase()
+            )
+          );
     const matchingUris = matchingTracks
       .map((track) => track.uri)
       .filter(Boolean);
@@ -655,7 +662,10 @@ function App() {
       return {
         ok: false,
         reason: "empty",
-        message: "このタグに一致する Spotify 楽曲がまだありません。",
+        message:
+          normalizedTagType === "artist"
+            ? "このアーティストの Spotify 楽曲がまだありません。"
+            : "このタグに一致する Spotify 楽曲がまだありません。",
       };
     }
 
@@ -663,10 +673,17 @@ function App() {
     setPlaylistCreationError("");
     setCreatedPlaylist(null);
 
+    const conditionLabel =
+      normalizedTagType === "auto"
+        ? "自動タグ"
+        : normalizedTagType === "artist"
+        ? "アーティスト"
+        : "手動タグ";
+
     try {
       const nextPlaylist = await createPlaylist(activeSession.accessToken, {
         name: normalizedPlaylistName,
-        description: `「${sourcePlaylist.name}」から ${normalizedTagType === "auto" ? "自動" : "手動"}タグ「${normalizedTag}」で作成`,
+        description: `「${sourcePlaylist.name}」から ${conditionLabel}「${normalizedTag}」で作成`,
         isPublic,
       });
 
@@ -681,7 +698,7 @@ function App() {
         matchedTrackCount: matchingTracks.length,
         addedTrackCount: matchingUris.length,
         tagType: normalizedTagType,
-        tagTypeLabel: normalizedTagType === "auto" ? "自動" : "手動",
+        tagTypeLabel: conditionLabel,
         tagValue: normalizedTag,
       };
 
