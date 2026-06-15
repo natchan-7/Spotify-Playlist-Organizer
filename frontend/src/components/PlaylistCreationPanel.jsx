@@ -64,6 +64,26 @@ function PlaylistCreationPanel({
 
   const availableTagOptions =
     selectedTagType === "auto" ? availableAutoTags : availableUserTags;
+
+  const tagTrackCounts = useMemo(() => {
+    const counts = new Map();
+
+    for (const track of tracks) {
+      const tags = (selectedTagType === "auto" ? track.autoTags : track.userTags) || [];
+
+      for (const tag of tags) {
+        if (typeof tag !== "string" || !tag) {
+          continue;
+        }
+
+        const key = tag.toLowerCase();
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+    }
+
+    return counts;
+  }, [selectedTagType, tracks]);
+
   const filteredTagOptions = useMemo(() => {
     const normalizedQuery = deferredTagSearchQuery.trim().toLowerCase();
 
@@ -411,7 +431,10 @@ function PlaylistCreationPanel({
                         type="button"
                         onMouseDown={() => updateSelectedTagValue(tag)}
                       >
-                        {tag}
+                        <span>{tag}</span>
+                        <span className="tag-search-option-count">
+                          {tagTrackCounts.get(tag.toLowerCase()) || 0}曲
+                        </span>
                       </button>
                     ))
                   ) : (
