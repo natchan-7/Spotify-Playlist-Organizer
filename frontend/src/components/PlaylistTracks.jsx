@@ -6,6 +6,16 @@ function getTrackArtworkFallback(trackName) {
   return trackName ? trackName.slice(0, 1).toUpperCase() : "T";
 }
 
+function trackMatchesSearchQuery(track, query) {
+  if (track.name?.toLowerCase().includes(query)) {
+    return true;
+  }
+
+  return (track.artists || []).some((artist) =>
+    artist?.name?.toLowerCase().includes(query)
+  );
+}
+
 function ArtistNames({ artists }) {
   if (!Array.isArray(artists) || artists.length === 0) {
     return "不明なアーティスト";
@@ -51,11 +61,18 @@ function PlaylistTracks({
   );
   const [tagDrafts, setTagDrafts] = useState({});
   const [tagFeedback, setTagFeedback] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setTagDrafts({});
     setTagFeedback({});
+    setSearchQuery("");
   }, [selectedPlaylist?.id]);
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredTracks = normalizedSearchQuery
+    ? tracks.filter((track) => trackMatchesSearchQuery(track, normalizedSearchQuery))
+    : tracks;
 
   function getAutoTagStatusLabel() {
     if (genreStatus === "success") {
@@ -151,7 +168,11 @@ function PlaylistTracks({
         </div>
         {tracksStatus === "success" && selectedPlaylist && (
           <div className="track-status-group">
-            <span className="playlist-count">{tracks.length}曲表示中</span>
+            <span className="playlist-count">
+              {normalizedSearchQuery
+                ? `${filteredTracks.length} / ${tracks.length}曲表示中`
+                : `${tracks.length}曲表示中`}
+            </span>
             {tracks.length > 0 && (
               <span className="playlist-count playlist-count-secondary">
                 {getAutoTagStatusLabel()}
@@ -274,8 +295,40 @@ function PlaylistTracks({
         )}
 
       {selectedPlaylist && tracksStatus === "success" && tracks.length > 0 && (
+        <div className="track-search-field tag-search-field">
+          <input
+            className="playlist-create-input"
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="曲名・アーティスト名で検索"
+            aria-label="楽曲を曲名またはアーティスト名で検索"
+          />
+          {searchQuery && (
+            <button
+              className="tag-search-clear-button"
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="検索条件をクリア"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
+
+      {selectedPlaylist &&
+        tracksStatus === "success" &&
+        tracks.length > 0 &&
+        filteredTracks.length === 0 && (
+          <div className="notice">
+            <p>検索条件に一致する楽曲が見つかりませんでした。</p>
+          </div>
+        )}
+
+      {selectedPlaylist && tracksStatus === "success" && filteredTracks.length > 0 && (
         <div className="track-list">
-          {tracks.map((track) => (
+          {filteredTracks.map((track) => (
             <article key={track.id} className="track-row">
               <div className="track-artwork">
                 {track.thumbnailUrl ? (
