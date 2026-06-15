@@ -25,6 +25,25 @@ const SPOTIFY_SCOPES = [
 ].join(" ");
 const TOKEN_EXPIRY_SKEW_MS = 60 * 1000;
 
+const OAUTH_ERROR_MESSAGES = {
+  access_denied:
+    "Spotify へのアクセスが許可されませんでした。ログイン画面で「同意する」を選択してください。",
+  invalid_grant: "Spotify のログイン情報が無効になりました。もう一度ログインしてください。",
+  invalid_client: "Spotify アプリの設定（Client ID）に問題があります。",
+  unauthorized_client: "この Spotify アプリには、この認証方式を使う権限がありません。",
+  invalid_scope: "要求している権限を Spotify アプリ設定で確認してください。",
+  server_error: "Spotify 側で問題が発生しています。しばらくしてから再度お試しください。",
+  temporarily_unavailable: "Spotify が一時的に利用できません。しばらくしてから再度お試しください。",
+};
+
+function getOAuthErrorMessage(code, fallbackMessage) {
+  return (
+    OAUTH_ERROR_MESSAGES[code] ||
+    fallbackMessage ||
+    "Spotify 認証でエラーが発生しました。もう一度ログインしてください。"
+  );
+}
+
 async function parseJsonSafely(response) {
   const text = await response.text();
 
@@ -152,7 +171,7 @@ export async function exchangeCodeForToken() {
     clearAuthQueryParams();
     clearCodeVerifier();
     removeStoredAuthState();
-    throw new Error(`Spotify 認証に失敗しました: ${error}`);
+    throw new Error(getOAuthErrorMessage(error));
   }
 
   const code = params.get("code");
@@ -196,12 +215,9 @@ export async function exchangeCodeForToken() {
   const payload = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const message =
-      payload?.error_description ||
-      payload?.error ||
-      payload?.message ||
-      "トークンの取得に失敗しました。";
-    throw new Error(message);
+    throw new Error(
+      getOAuthErrorMessage(payload?.error, "トークンの取得に失敗しました。もう一度ログインしてください。")
+    );
   }
 
   const session = {
@@ -253,12 +269,9 @@ export async function refreshSpotifySession(
 
   if (!response.ok) {
     clearStoredSpotifySession();
-    const message =
-      payload?.error_description ||
-      payload?.error ||
-      payload?.message ||
-      "Spotify セッションの更新に失敗しました。";
-    throw new Error(message);
+    throw new Error(
+      getOAuthErrorMessage(payload?.error, "Spotify セッションの更新に失敗しました。もう一度ログインしてください。")
+    );
   }
 
   const refreshedSession = {

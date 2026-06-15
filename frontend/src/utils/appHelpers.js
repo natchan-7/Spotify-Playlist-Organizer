@@ -18,6 +18,10 @@ export function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessa
     );
   }
 
+  if (status === 404) {
+    return "対象のプレイリストや情報が Spotify 上に見つかりませんでした。削除されたか、アクセスできない可能性があります。";
+  }
+
   if (status === 429) {
     if (typeof error.retryAfter === "number" && Number.isFinite(error.retryAfter)) {
       return `Spotify のアクセス上限に達しました。約 ${error.retryAfter} 秒待ってからもう一度試してください。`;
@@ -26,7 +30,11 @@ export function getSpotifyApiErrorMessage(error, fallbackMessage, forbiddenMessa
     return "Spotify のアクセス上限に達しました。少し待ってからもう一度試してください。";
   }
 
-  return error.message || fallbackMessage;
+  if (typeof status === "number" && status >= 500) {
+    return "Spotify サーバー側で問題が発生している可能性があります。しばらくしてから再度お試しください。";
+  }
+
+  return fallbackMessage || "Spotify のリクエストでエラーが発生しました。もう一度お試しください。";
 }
 
 export function hasSpotifyScope(session, requiredScope) {
