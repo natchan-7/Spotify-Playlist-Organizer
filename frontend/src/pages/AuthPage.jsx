@@ -56,6 +56,8 @@ function AuthPage(props) {
           isAuthenticated={props.isAuthenticated}
           onClearArtistGenreCache={props.onClearArtistGenreCache}
           onClearStoredTrackTags={props.onClearStoredTrackTags}
+          onExportTrackTags={props.onExportTrackTags}
+          onImportTrackTags={props.onImportTrackTags}
         />
       </div>
     </main>

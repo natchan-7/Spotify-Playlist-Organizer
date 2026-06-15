@@ -22,7 +22,9 @@ import {
 import {
   addUserTagToTrack,
   clearStoredTrackTags,
+  exportTrackTagsAsJson,
   getStoredTrackTagsMap,
+  importTrackTagsFromJson,
   mergeAutoTagsIntoTracks,
   mergeTrackTagsIntoTracks,
   removeUserTagFromTrack,
@@ -737,6 +739,52 @@ function App() {
     );
   }
 
+  function handleExportTrackTags() {
+    const trackTagsMap = getStoredTrackTagsMap();
+
+    if (Object.keys(trackTagsMap).length === 0) {
+      setBrowserDataNotice("エクスポートできる手動タグがありません。");
+      return;
+    }
+
+    const json = exportTrackTagsAsJson(trackTagsMap);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const today = new Date().toISOString().slice(0, 10);
+
+    link.href = url;
+    link.download = `spotify-playlist-organizer-tags-${today}.json`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+    setBrowserDataNotice("手動タグを JSON ファイルとして書き出しました。");
+  }
+
+  function handleImportTrackTags(jsonText) {
+    const result = importTrackTagsFromJson(jsonText);
+
+    if (!result.ok) {
+      const message =
+        result.reason === "parse"
+          ? "選択したファイルを JSON として読み込めませんでした。"
+          : "ファイルから読み込める手動タグが見つかりませんでした。";
+
+      setBrowserDataNotice(message);
+      return;
+    }
+
+    setTracks(
+      mergeAutoTagsIntoTracks(rawTracks, artistGenresByArtistId, result.trackTagsMap)
+    );
+
+    setBrowserDataNotice(
+      result.addedTagCount > 0
+        ? `${result.importedTrackCount}曲分のタグ情報を読み込み、${result.addedTagCount}件の手動タグを追加しました。`
+        : "ファイルを読み込みましたが、既存のタグと重複していたため新しく追加されたタグはありませんでした。"
+    );
+  }
+
   return (
     <AuthPage
       authStatus={authStatus}
@@ -768,6 +816,8 @@ function App() {
       browserDataNotice={browserDataNotice}
       onClearArtistGenreCache={handleClearArtistGenreCache}
       onClearStoredTrackTags={handleClearStoredTrackTags}
+      onExportTrackTags={handleExportTrackTags}
+      onImportTrackTags={handleImportTrackTags}
       onCreatePlaylistFromTag={handleCreatePlaylistFromTag}
       onResetPlaylistCreationState={handleResetPlaylistCreationState}
       onAddUserTag={handleAddUserTag}

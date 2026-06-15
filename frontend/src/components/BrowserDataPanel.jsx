@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import { useRef } from "react";
 
 function BrowserDataPanel({
   browserDataNotice,
@@ -6,7 +7,30 @@ function BrowserDataPanel({
   isAuthenticated,
   onClearArtistGenreCache,
   onClearStoredTrackTags,
+  onExportTrackTags,
+  onImportTrackTags,
 }) {
+  const importInputRef = useRef(null);
+
+  function handleImportFileChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        onImportTrackTags?.(reader.result);
+      }
+    };
+
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -59,6 +83,28 @@ function BrowserDataPanel({
             >
               保存済み手動タグを削除
             </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={onExportTrackTags}
+              disabled={browserDataSummary.userTagEntryCount === 0}
+            >
+              手動タグをエクスポート
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+            >
+              手動タグをインポート
+            </button>
+            <input
+              ref={importInputRef}
+              className="visually-hidden-file-input"
+              type="file"
+              accept="application/json"
+              onChange={handleImportFileChange}
+            />
           </div>
         </>
       )}

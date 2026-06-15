@@ -259,6 +259,66 @@ export function addUserTagToTrack(
   };
 }
 
+export function exportTrackTagsAsJson(trackTagsMap = getStoredTrackTagsMap()) {
+  return JSON.stringify(
+    {
+      version: 1,
+      trackTags: sanitizeTrackTagsMap(trackTagsMap),
+    },
+    null,
+    2
+  );
+}
+
+export function importTrackTagsFromJson(jsonText, trackTagsMap = getStoredTrackTagsMap()) {
+  let parsed;
+
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (error) {
+    return { ok: false, reason: "parse" };
+  }
+
+  const importedTrackTagsMap =
+    parsed && typeof parsed === "object" && typeof parsed.trackTags === "object"
+      ? parsed.trackTags
+      : parsed;
+
+  const sanitizedImport = sanitizeTrackTagsMap(importedTrackTagsMap);
+  const importedTrackIds = Object.keys(sanitizedImport);
+
+  if (importedTrackIds.length === 0) {
+    return { ok: false, reason: "empty" };
+  }
+
+  const mergedTrackTagsMap = { ...trackTagsMap };
+  let addedTagCount = 0;
+
+  for (const trackId of importedTrackIds) {
+    const existingUserTags = mergedTrackTagsMap[trackId]?.user || [];
+    const mergedUserTags = dedupeTextList([
+      ...existingUserTags,
+      ...sanitizedImport[trackId].user,
+    ]);
+
+    addedTagCount += mergedUserTags.length - existingUserTags.length;
+
+    mergedTrackTagsMap[trackId] = {
+      auto: [],
+      user: mergedUserTags,
+    };
+  }
+
+  saveTrackTagsMap(mergedTrackTagsMap);
+
+  return {
+    ok: true,
+    trackTagsMap: sanitizeTrackTagsMap(mergedTrackTagsMap),
+    importedTrackCount: importedTrackIds.length,
+    addedTagCount,
+  };
+}
+
 export function removeUserTagFromTrack(
   trackId,
   userTag,
