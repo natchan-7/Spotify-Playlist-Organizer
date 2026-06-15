@@ -1,4 +1,4 @@
-# AGENT.md - Spotify Playlist Organizer
+# CLAUDE.md - Spotify Playlist Organizer
 
 ## Goal
 

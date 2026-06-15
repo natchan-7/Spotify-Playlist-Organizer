@@ -20,6 +20,7 @@
 - 手動タグ追加・削除
 - タグ付き楽曲から新規プレイリスト作成
 - ブラウザ保存データの確認・削除
+- 選択中プレイリストのジャンル集計・主要アーティスト表示
 
 ## 候補
 
@@ -27,9 +28,7 @@
 
 - [ ] Spotify 側の制限で失敗したときの文言を、利用者向けに簡潔にする
 - [ ] Spotify のジャンル情報だけに頼らない補助ルールを増やす
-- [ ] アーティスト名を Spotify リンク化する
-- [ ] ジャンル集計カードを追加する
-- [ ] 主要アーティスト一覧を表示する
+- [ ] アーティスト名を Spotify リンク化する（楽曲一覧側）
 
 ### 優先度中
 
@@ -54,6 +53,12 @@
 - [x] プレイリスト取得・詳細取得まわりを最新の `items` エンドポイント前提に整理
 - [x] Spotify API ガイドラインに合わせて PKCE + refresh token, 429 backoff, redirect URI 検証を整理
 - [x] Spotify 由来のアーティストキャッシュと自動タグの長期保存をやめ、手動タグのみ保存する形に整理
+- [x] ジャンル集計カードを追加する
+- [x] 主要アーティスト一覧を表示する（Spotify リンク付き）
+- [x] 未使用のプレースホルダー関数（`persistGeneratedAutoTags` / `getStoredArtistGenreCache` / `saveArtistGenreCache`）を削除
+- [x] React Error Boundary を追加
+- [x] GitHub Actions でビルド確認 CI を追加
+- [x] App.jsx の純粋関数ヘルパーを `utils/appHelpers.js` / `utils/formatting.js` へ分割
 
 ## 実装メモ
 

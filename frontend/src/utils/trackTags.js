@@ -187,19 +187,6 @@ export function mergeAutoTagsIntoTracks(
   });
 }
 
-export function persistGeneratedAutoTags(
-  tracks,
-  artistGenresByArtistId,
-  trackTagsMap = getStoredTrackTagsMap()
-) {
-  return {
-    trackTagsMap,
-    updatedTrackCount: 0,
-    savedAutoTagCount: 0,
-    createdEntryCount: 0,
-  };
-}
-
 export function addUserTagToTrack(
   trackId,
   userTag,
