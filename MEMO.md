@@ -26,7 +26,6 @@
 
 ### 優先度高
 
-- [ ] Spotify 側の制限で失敗したときの文言を、利用者向けに簡潔にする
 - [ ] Spotify のジャンル情報だけに頼らない補助ルールを増やす
 - [ ] アーティスト名を Spotify リンク化する（楽曲一覧側）
 
@@ -59,6 +58,7 @@
 - [x] React Error Boundary を追加
 - [x] GitHub Actions でビルド確認 CI を追加
 - [x] App.jsx の純粋関数ヘルパーを `utils/appHelpers.js` / `utils/formatting.js` へ分割
+- [x] Spotify 側の制限で失敗したときの文言を、利用者向けに簡潔にする
 
 ## 実装メモ
 
