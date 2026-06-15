@@ -1,9 +1,33 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import { formatArtists, formatDuration, formatTagLabel } from "../utils/formatting";
+import { formatDuration, formatTagLabel } from "../utils/formatting";
 
 function getTrackArtworkFallback(trackName) {
   return trackName ? trackName.slice(0, 1).toUpperCase() : "T";
+}
+
+function ArtistNames({ artists }) {
+  if (!Array.isArray(artists) || artists.length === 0) {
+    return "不明なアーティスト";
+  }
+
+  return artists.map((artist, index) => (
+    <span key={artist.id || artist.name || index}>
+      {index > 0 ? ", " : ""}
+      {artist.id ? (
+        <a
+          className="track-artist-link"
+          href={`https://open.spotify.com/artist/${artist.id}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {artist.name}
+        </a>
+      ) : (
+        artist.name
+      )}
+    </span>
+  ));
 }
 
 function PlaylistTracks({
@@ -273,7 +297,9 @@ function PlaylistTracks({
                     {formatDuration(track.durationMs)}
                   </span>
                 </div>
-                <p className="track-meta">{formatArtists(track.artists)}</p>
+                <p className="track-meta">
+                  <ArtistNames artists={track.artists} />
+                </p>
                 <p className="track-meta">{track.album}</p>
                 {(track.autoTags?.length > 0 || track.userTags?.length > 0) && (
                   <div className="track-tag-row">
