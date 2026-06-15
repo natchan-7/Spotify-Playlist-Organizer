@@ -20,34 +20,56 @@ function trackMatchesArtist(track, artistId) {
   return (track.artists || []).some((artist) => artist?.id === artistId);
 }
 
-function ArtistNames({ artists }) {
+function ArtistNames({ artists, trackId, openArtist, onToggleArtist }) {
   if (!Array.isArray(artists) || artists.length === 0) {
     return "不明なアーティスト";
   }
 
-  return artists.map((artist, index) => (
-    <span key={artist.id || artist.name || index}>
-      {index > 0 ? ", " : ""}
-      {artist.id ? (
-        <a
-          className="track-artist-link"
-          href={`https://open.spotify.com/artist/${artist.id}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {artist.name}
-        </a>
-      ) : (
-        artist.name
-      )}
-    </span>
-  ));
+  return artists.map((artist, index) => {
+    const isOpen =
+      openArtist?.trackId === trackId && openArtist?.artistId === artist.id;
+
+    return (
+      <span key={artist.id || artist.name || index}>
+        {index > 0 ? ", " : ""}
+        {artist.id ? (
+          <>
+            <a
+              className="track-artist-link"
+              href={`https://open.spotify.com/artist/${artist.id}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {artist.name}
+            </a>
+            <button
+              type="button"
+              className="track-artist-info-button"
+              onClick={() => onToggleArtist(trackId, artist.id, artist.name)}
+              aria-expanded={isOpen}
+              aria-label={`${artist.name} の詳細を表示`}
+              title="アーティスト詳細を表示"
+            >
+              ⓘ
+            </button>
+          </>
+        ) : (
+          artist.name
+        )}
+      </span>
+    );
+  });
 }
 
 function PlaylistTracks({
+  artistDetails,
+  artistDetailsError,
+  artistDetailsId,
+  artistDetailsStatus,
   genreError,
   genreStatus,
   onAddUserTag,
+  onFetchArtistDetails,
   onRemoveUserTag,
   selectedPlaylist,
   tagStorageError,
@@ -71,6 +93,7 @@ function PlaylistTracks({
   const [selectedTrackIds, setSelectedTrackIds] = useState(() => new Set());
   const [bulkTagDraft, setBulkTagDraft] = useState("");
   const [bulkTagFeedback, setBulkTagFeedback] = useState("");
+  const [openArtist, setOpenArtist] = useState(null);
 
   useEffect(() => {
     setTagDrafts({});
@@ -81,6 +104,7 @@ function PlaylistTracks({
     setSelectedTrackIds(new Set());
     setBulkTagDraft("");
     setBulkTagFeedback("");
+    setOpenArtist(null);
   }, [selectedPlaylist?.id]);
 
   const availableArtists = useMemo(() => {
@@ -283,6 +307,16 @@ function PlaylistTracks({
       ...currentFeedback,
       [trackId]: "",
     }));
+  }
+
+  function toggleArtistDetails(trackId, artistId) {
+    if (openArtist?.trackId === trackId && openArtist?.artistId === artistId) {
+      setOpenArtist(null);
+      return;
+    }
+
+    setOpenArtist({ trackId, artistId });
+    onFetchArtistDetails?.(artistId);
   }
 
   return (
@@ -571,8 +605,69 @@ function PlaylistTracks({
                   </div>
                 </div>
                 <p className="track-meta">
-                  <ArtistNames artists={track.artists} />
+                  <ArtistNames
+                    artists={track.artists}
+                    trackId={track.id}
+                    openArtist={openArtist}
+                    onToggleArtist={toggleArtistDetails}
+                  />
                 </p>
+                {openArtist?.trackId === track.id && (
+                  <div className="artist-popover" role="dialog">
+                    {(artistDetailsId !== openArtist.artistId ||
+                      artistDetailsStatus === "loading") && (
+                      <p>アーティスト情報を取得しています...</p>
+                    )}
+                    {artistDetailsId === openArtist.artistId &&
+                      artistDetailsStatus === "error" && (
+                        <p className="artist-popover-error">{artistDetailsError}</p>
+                      )}
+                    {artistDetailsId === openArtist.artistId &&
+                      artistDetailsStatus === "success" &&
+                      artistDetails && (
+                        <div className="artist-popover-content">
+                          {artistDetails.imageUrl && (
+                            <img
+                              className="artist-popover-image"
+                              src={artistDetails.imageUrl}
+                              alt={`${artistDetails.name} の画像`}
+                              loading="lazy"
+                            />
+                          )}
+                          <div className="artist-popover-info">
+                            <strong>{artistDetails.name}</strong>
+                            {artistDetails.genres.length > 0 && (
+                              <p className="track-meta">
+                                {artistDetails.genres.map(formatTagLabel).join(", ")}
+                              </p>
+                            )}
+                            <p className="track-meta">
+                              人気度 {artistDetails.popularity} / フォロワー{" "}
+                              {artistDetails.followers.toLocaleString("ja-JP")}人
+                            </p>
+                            {artistDetails.spotifyUrl && (
+                              <a
+                                className="track-artist-link"
+                                href={artistDetails.spotifyUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Spotify で見る
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    <button
+                      type="button"
+                      className="artist-popover-close"
+                      onClick={() => setOpenArtist(null)}
+                      aria-label="アーティスト詳細を閉じる"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
                 <p className="track-meta">{track.album}</p>
                 {(track.autoTags?.length > 0 || track.userTags?.length > 0) && (
                   <div className="track-tag-row">

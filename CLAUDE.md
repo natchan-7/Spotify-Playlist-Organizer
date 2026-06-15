@@ -292,6 +292,7 @@ Current endpoints:
 - `GET /me/playlists`
 - `GET /playlists/{id}/items`
 - `GET /artists?ids=...`
+- `GET /artists/{id}`
 - `POST /me/playlists`
 - `POST /playlists/{id}/items`
 

@@ -349,6 +349,24 @@ async function fetchArtistGenresInChunks(accessToken, artistIds) {
   return artistGenresByArtistId;
 }
 
+export async function fetchArtistById(accessToken, artistId) {
+  const payload = await fetchSpotifyPage(
+    `${SPOTIFY_API_URL}/artists/${artistId}`,
+    accessToken,
+    "アーティスト情報を取得できませんでした。"
+  );
+
+  return {
+    id: payload.id || artistId,
+    name: payload.name || "",
+    genres: Array.isArray(payload.genres) ? payload.genres : [],
+    popularity: Number.isFinite(payload.popularity) ? payload.popularity : 0,
+    followers: Number.isFinite(payload.followers?.total) ? payload.followers.total : 0,
+    imageUrl: payload.images?.[0]?.url || "",
+    spotifyUrl: payload.external_urls?.spotify || "",
+  };
+}
+
 export async function fetchArtistGenres(accessToken, artistIds) {
   const normalizedArtistIds = Array.from(
     new Set(artistIds.filter((artistId) => typeof artistId === "string" && artistId))

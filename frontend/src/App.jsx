@@ -3,6 +3,7 @@ import AuthPage from "./pages/AuthPage";
 import {
   addTracksToPlaylist,
   createPlaylist,
+  fetchArtistById,
   fetchArtistGenres,
   fetchCurrentUserPlaylists,
   fetchCurrentUserProfile,
@@ -63,6 +64,10 @@ function App() {
   const [createdPlaylist, setCreatedPlaylist] = useState(null);
   const [artistGenresByArtistId, setArtistGenresByArtistId] = useState({});
   const [browserDataNotice, setBrowserDataNotice] = useState("");
+  const [artistDetails, setArtistDetails] = useState(null);
+  const [artistDetailsId, setArtistDetailsId] = useState(null);
+  const [artistDetailsStatus, setArtistDetailsStatus] = useState("idle");
+  const [artistDetailsError, setArtistDetailsError] = useState("");
   const redirectUri = getSpotifyRedirectUri();
 
   const selectedPlaylist =
@@ -588,6 +593,48 @@ function App() {
     }
   }
 
+  async function handleFetchArtistDetails(artistId) {
+    if (!artistId) {
+      return;
+    }
+
+    if (artistDetailsId === artistId && artistDetailsStatus === "success") {
+      return;
+    }
+
+    setArtistDetailsId(artistId);
+    setArtistDetailsStatus("loading");
+    setArtistDetailsError("");
+    setArtistDetails(null);
+
+    let activeSession;
+
+    try {
+      activeSession = await ensureSession();
+    } catch (error) {
+      setArtistDetailsStatus("error");
+      setArtistDetailsError(getSpotifyApiErrorMessage(error, "アーティスト情報を取得できませんでした。"));
+      return;
+    }
+
+    if (!activeSession?.accessToken) {
+      setArtistDetailsStatus("error");
+      setArtistDetailsError(
+        getSpotifyApiErrorMessage(createMissingSessionError(), "アーティスト情報を取得できませんでした。")
+      );
+      return;
+    }
+
+    try {
+      const details = await fetchArtistById(activeSession.accessToken, artistId);
+      setArtistDetails(details);
+      setArtistDetailsStatus("success");
+    } catch (error) {
+      setArtistDetailsStatus("error");
+      setArtistDetailsError(getSpotifyApiErrorMessage(error, "アーティスト情報を取得できませんでした。"));
+    }
+  }
+
   async function handleCreatePlaylistFromTag({
     sourcePlaylist,
     tagType,
@@ -840,6 +887,11 @@ function App() {
       onAddUserTag={handleAddUserTag}
       onRemoveUserTag={handleRemoveUserTag}
       onSelectPlaylist={handleSelectPlaylist}
+      artistDetails={artistDetails}
+      artistDetailsId={artistDetailsId}
+      artistDetailsStatus={artistDetailsStatus}
+      artistDetailsError={artistDetailsError}
+      onFetchArtistDetails={handleFetchArtistDetails}
     />
   );
 }

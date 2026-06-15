@@ -33,6 +33,11 @@ function AuthPage(props) {
           tracksStatus={props.tracksStatus}
           onAddUserTag={props.onAddUserTag}
           onRemoveUserTag={props.onRemoveUserTag}
+          artistDetails={props.artistDetails}
+          artistDetailsId={props.artistDetailsId}
+          artistDetailsStatus={props.artistDetailsStatus}
+          artistDetailsError={props.artistDetailsError}
+          onFetchArtistDetails={props.onFetchArtistDetails}
         />
         <PlaylistInsights
           genreStatus={props.genreStatus}
