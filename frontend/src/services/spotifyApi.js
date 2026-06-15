@@ -252,7 +252,6 @@ function normalizeTrackItem(item) {
       id: artist.id,
       name: artist.name,
     })),
-    popularity: Number.isFinite(track.popularity) ? track.popularity : 0,
     autoTags: [],
     userTags: [],
   };
@@ -360,8 +359,6 @@ export async function fetchArtistById(accessToken, artistId) {
     id: payload.id || artistId,
     name: payload.name || "",
     genres: Array.isArray(payload.genres) ? payload.genres : [],
-    popularity: Number.isFinite(payload.popularity) ? payload.popularity : 0,
-    followers: Number.isFinite(payload.followers?.total) ? payload.followers.total : 0,
     imageUrl: payload.images?.[0]?.url || "",
     spotifyUrl: payload.external_urls?.spotify || "",
   };

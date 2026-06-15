@@ -89,7 +89,6 @@ function PlaylistTracks({
   const [tagFeedback, setTagFeedback] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArtistId, setSelectedArtistId] = useState("");
-  const [sortOrder, setSortOrder] = useState("default");
   const [selectedTrackIds, setSelectedTrackIds] = useState(() => new Set());
   const [bulkTagDraft, setBulkTagDraft] = useState("");
   const [bulkTagFeedback, setBulkTagFeedback] = useState("");
@@ -100,7 +99,6 @@ function PlaylistTracks({
     setTagFeedback({});
     setSearchQuery("");
     setSelectedArtistId("");
-    setSortOrder("default");
     setSelectedTrackIds(new Set());
     setBulkTagDraft("");
     setBulkTagFeedback("");
@@ -137,21 +135,9 @@ function PlaylistTracks({
     return true;
   });
 
-  const sortedTracks = useMemo(() => {
-    if (sortOrder === "popularity-desc") {
-      return [...filteredTracks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-    }
-
-    if (sortOrder === "popularity-asc") {
-      return [...filteredTracks].sort((a, b) => (a.popularity || 0) - (b.popularity || 0));
-    }
-
-    return filteredTracks;
-  }, [filteredTracks, sortOrder]);
-
   const allVisibleSelected =
-    sortedTracks.length > 0 &&
-    sortedTracks.every((track) => selectedTrackIds.has(track.id));
+    filteredTracks.length > 0 &&
+    filteredTracks.every((track) => selectedTrackIds.has(track.id));
 
   function toggleTrackSelection(trackId) {
     setSelectedTrackIds((currentSelection) => {
@@ -172,7 +158,7 @@ function PlaylistTracks({
     setSelectedTrackIds((currentSelection) => {
       const nextSelection = new Set(currentSelection);
 
-      for (const track of sortedTracks) {
+      for (const track of filteredTracks) {
         if (allVisibleSelected) {
           nextSelection.delete(track.id);
         } else {
@@ -499,16 +485,6 @@ function PlaylistTracks({
               ))}
             </select>
           )}
-          <select
-            className="playlist-create-select track-sort-select"
-            value={sortOrder}
-            onChange={(event) => setSortOrder(event.target.value)}
-            aria-label="楽曲の並び順"
-          >
-            <option value="default">標準の順序</option>
-            <option value="popularity-desc">人気度が高い順</option>
-            <option value="popularity-asc">人気度が低い順</option>
-          </select>
         </div>
       )}
 
@@ -530,7 +506,7 @@ function PlaylistTracks({
               onChange={toggleSelectAllVisible}
               aria-label="表示中の曲をすべて選択"
             />
-            <span>表示中の{sortedTracks.length}曲をすべて選択</span>
+            <span>表示中の{filteredTracks.length}曲をすべて選択</span>
           </label>
 
           {selectedTrackIds.size > 0 && (
@@ -570,7 +546,7 @@ function PlaylistTracks({
 
       {selectedPlaylist && tracksStatus === "success" && filteredTracks.length > 0 && (
         <div className="track-list">
-          {sortedTracks.map((track) => (
+          {filteredTracks.map((track) => (
             <article key={track.id} className="track-row">
               <label className="track-select">
                 <input
@@ -596,17 +572,9 @@ function PlaylistTracks({
               <div className="track-body">
                 <div className="track-title-row">
                   <h3>{track.name}</h3>
-                  <div className="track-title-meta">
-                    <span
-                      className="track-popularity-badge"
-                      title="Spotify 上の人気度（0〜100）"
-                    >
-                      人気度 {track.popularity}
-                    </span>
-                    <span className="track-duration">
-                      {formatDuration(track.durationMs)}
-                    </span>
-                  </div>
+                  <span className="track-duration">
+                    {formatDuration(track.durationMs)}
+                  </span>
                 </div>
                 <p className="track-meta">
                   <ArtistNames
@@ -645,10 +613,6 @@ function PlaylistTracks({
                                 {artistDetails.genres.map(formatTagLabel).join(", ")}
                               </p>
                             )}
-                            <p className="track-meta">
-                              人気度 {artistDetails.popularity} / フォロワー{" "}
-                              {artistDetails.followers.toLocaleString("ja-JP")}人
-                            </p>
                             {artistDetails.spotifyUrl && (
                               <a
                                 className="track-artist-link"

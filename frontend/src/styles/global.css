@@ -407,25 +407,10 @@ code {
   overflow-wrap: anywhere;
 }
 
-.track-title-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-shrink: 0;
-}
-
 .track-duration {
   color: #9fb1c9;
   font-size: 0.9rem;
-}
-
-.track-popularity-badge {
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  color: #c8d4e6;
-  font-size: 0.78rem;
-  white-space: nowrap;
-  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 }
 
 .track-meta {
@@ -773,8 +758,7 @@ code {
   margin-top: 0;
 }
 
-.track-artist-filter,
-.track-sort-select {
+.track-artist-filter {
   flex: 1;
   min-width: 180px;
 }
