@@ -82,7 +82,29 @@ function normalizeUserTagInput(userTag) {
   return userTag.trim().replace(/\s+/g, " ");
 }
 
-function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
+const TRACK_PATTERN_TAG_RULES = [
+  { pattern: /\blive\b/i, tag: "live" },
+  { pattern: /\bunplugged\b/i, tag: "unplugged" },
+  { pattern: /\bremix\b/i, tag: "remix" },
+  { pattern: /\bacoustic\b/i, tag: "acoustic" },
+  { pattern: /\binstrumental\b/i, tag: "instrumental" },
+  { pattern: /\bkaraoke\b/i, tag: "karaoke" },
+  { pattern: /\bcover\b/i, tag: "cover" },
+  { pattern: /\bdemo\b/i, tag: "demo" },
+  { pattern: /\bremaster(ed)?\b/i, tag: "remastered" },
+  { pattern: /\bsoundtrack\b/i, tag: "soundtrack" },
+  { pattern: /\bextended\b/i, tag: "extended" },
+];
+
+function buildPatternTagsFromTrack(track) {
+  const haystack = `${track.name || ""} ${track.album || ""}`;
+
+  return TRACK_PATTERN_TAG_RULES.filter(({ pattern }) => pattern.test(haystack)).map(
+    ({ tag }) => tag
+  );
+}
+
+function buildAutoTagsForTrack(track, artistGenresByArtistId) {
   const genres = (track.artists || []).flatMap((artist) => {
     if (!artist?.id) {
       return [];
@@ -92,14 +114,17 @@ function buildAutoTagsFromArtistGenres(track, artistGenresByArtistId) {
   });
 
   const normalizedGenres = normalizeGenreTags(genres);
+  const patternTags = buildPatternTagsFromTrack(track);
 
   if (normalizedGenres.length > 0) {
-    return normalizedGenres;
+    return dedupeTextList([...normalizedGenres, ...patternTags]);
   }
 
-  return dedupeTextList(
+  const fallbackArtistTags = dedupeTextList(
     (track.artists || []).map((artist) => normalizeFallbackArtistTag(artist?.name))
   );
+
+  return dedupeTextList([...fallbackArtistTags, ...patternTags]);
 }
 
 export function getStoredTrackTagsMap() {
@@ -177,7 +202,7 @@ export function mergeAutoTagsIntoTracks(
     const generatedAutoTags =
       tags.auto.length > 0
         ? tags.auto
-        : buildAutoTagsFromArtistGenres(track, artistGenresByArtistId);
+        : buildAutoTagsForTrack(track, artistGenresByArtistId);
 
     return {
       ...track,

@@ -25,10 +25,6 @@
 
 ## 候補
 
-### 優先度高
-
-- [ ] Spotify のジャンル情報だけに頼らない補助ルールを増やす
-
 ### 優先度中
 
 - [ ] アーティスト詳細ポップオーバーを表示する
@@ -60,6 +56,8 @@
 - [x] App.jsx の純粋関数ヘルパーを `utils/appHelpers.js` / `utils/formatting.js` へ分割
 - [x] Spotify 側の制限で失敗したときの文言を、利用者向けに簡潔にする
 - [x] アーティスト名を Spotify リンク化する（楽曲一覧側）
+- [x] Spotify のジャンル情報だけに頼らない補助ルールを増やす
+  - 曲名・アルバム名から live / remix / acoustic / instrumental / karaoke / cover / demo / remastered / soundtrack / extended / unplugged をパターン検出し、ジャンルタグや既存のアーティスト名フォールバックに追加する形で自動タグ化
 
 ## 実装メモ
 
