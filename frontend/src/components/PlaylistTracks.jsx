@@ -547,7 +547,11 @@ function PlaylistTracks({
                 placeholder="選択した曲に追加する手動タグ"
                 aria-label="選択した曲に追加する手動タグ"
               />
-              <button className="user-tag-add-button" type="submit">
+              <button
+                className="user-tag-add-button"
+                type="submit"
+                disabled={!bulkTagDraft.trim()}
+              >
                 選択した曲に追加
               </button>
               <button
@@ -669,13 +673,19 @@ function PlaylistTracks({
                   </div>
                 )}
                 <p className="track-meta">{track.album}</p>
-                {(track.autoTags?.length > 0 || track.userTags?.length > 0) && (
+                {track.autoTags?.length > 0 || track.userTags?.length > 0 ? (
                   <div className="track-tag-row">
+                    {track.autoTags.length > 0 && (
+                      <span className="tag-group-label">自動</span>
+                    )}
                     {track.autoTags.map((tag) => (
                       <span key={`${track.id}-${tag}`} className="auto-tag">
                         {formatTagLabel(tag)}
                       </span>
                     ))}
+                    {track.userTags.length > 0 && (
+                      <span className="tag-group-label">手動</span>
+                    )}
                     {track.userTags.map((tag) => (
                       <button
                         key={`${track.id}-user-${tag}`}
@@ -690,6 +700,8 @@ function PlaylistTracks({
                       </button>
                     ))}
                   </div>
+                ) : (
+                  <p className="track-tag-empty">タグはまだありません</p>
                 )}
                 <form
                   className="user-tag-form"
@@ -703,7 +715,11 @@ function PlaylistTracks({
                     placeholder="手動タグを追加"
                     aria-label={`${track.name} に手動タグを追加`}
                   />
-                  <button className="user-tag-add-button" type="submit">
+                  <button
+                    className="user-tag-add-button"
+                    type="submit"
+                    disabled={!(tagDrafts[track.id] || "").trim()}
+                  >
                     追加
                   </button>
                 </form>
