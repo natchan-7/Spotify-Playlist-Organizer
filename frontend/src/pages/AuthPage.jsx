@@ -3,6 +3,7 @@ import AuthStatusCard from "../components/AuthStatusCard";
 import BrowserDataPanel from "../components/BrowserDataPanel";
 import PlaylistCollection from "../components/PlaylistCollection";
 import PlaylistCreationPanel from "../components/PlaylistCreationPanel";
+import PlaylistInsights from "../components/PlaylistInsights";
 import PlaylistTracks from "../components/PlaylistTracks";
 
 function AuthPage(props) {
@@ -32,6 +33,12 @@ function AuthPage(props) {
           tracksStatus={props.tracksStatus}
           onAddUserTag={props.onAddUserTag}
           onRemoveUserTag={props.onRemoveUserTag}
+        />
+        <PlaylistInsights
+          genreStatus={props.genreStatus}
+          selectedPlaylist={props.selectedPlaylist}
+          tracks={props.tracks}
+          tracksStatus={props.tracksStatus}
         />
         <PlaylistCreationPanel
           createdPlaylist={props.createdPlaylist}

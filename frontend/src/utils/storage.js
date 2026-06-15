@@ -45,15 +45,6 @@ export function clearStoredSpotifySession() {
   localStorage.removeItem(SPOTIFY_SESSION_KEY);
 }
 
-export function getStoredArtistGenreCache() {
-  clearStoredArtistGenreCache();
-  return {};
-}
-
-export function saveArtistGenreCache(cache) {
-  clearStoredArtistGenreCache();
-}
-
 export function clearStoredArtistGenreCache() {
   localStorage.removeItem(ARTIST_GENRE_CACHE_KEY);
 }
